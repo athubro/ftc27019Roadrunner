@@ -12,7 +12,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 public class SolarStorm27019TeleOP extends LinearOpMode {
 
     private Turret turretSystem;
-    
+    private MecanumDrive drive;
     private Drivetrain kickers;  // updated class
     private Pose2d pose = new Pose2d(0, 0, 0);
 
@@ -21,7 +21,7 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
 
         // Initialize all systems
         turretSystem = new Turret(hardwareMap, telemetry);
-
+        drive = new MecanumDrive(hardwareMap, pose);
         kickers = new Drivetrain(hardwareMap);  // initialize new kicker class
 
         telemetry.addLine("Turret + Drive + Kickers Ready");
@@ -73,7 +73,12 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             turretSystem.update();
 
 
-
+            // =========================
+            // Mecanum Drive Controls (Gamepad2)
+            // =========================
+            Vector2d translation = new Vector2d(-gamepad2.left_stick_y, gamepad2.left_stick_x);
+            double rotation = gamepad2.right_stick_x;
+            drive.setDrivePowers(new PoseVelocity2d(translation, rotation));
 
 
             // =========================
