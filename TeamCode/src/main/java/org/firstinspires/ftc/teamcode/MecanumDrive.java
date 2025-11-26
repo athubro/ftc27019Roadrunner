@@ -225,10 +225,10 @@ public final class MecanumDrive {
 
         // TODO: make sure your config has motors with these names (or change them)
         //   see https://ftc-docs.firstinspires.org/en/latest/hardware_and_software_configuration/configuring/index.html
-        leftFront = hardwareMap.get(DcMotorEx.class, "frontleft");
-        leftBack = hardwareMap.get(DcMotorEx.class, "backleft");
-        rightBack = hardwareMap.get(DcMotorEx.class, "backright");
-        rightFront = hardwareMap.get(DcMotorEx.class, "frontright");
+        leftFront = hardwareMap.get(DcMotorEx.class, "frontLeft");
+        leftBack = hardwareMap.get(DcMotorEx.class, "backLeft");
+        rightBack = hardwareMap.get(DcMotorEx.class, "backRight");
+        rightFront = hardwareMap.get(DcMotorEx.class, "frontRight");
 
         leftFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         leftBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -254,7 +254,7 @@ public final class MecanumDrive {
         MecanumKinematics.WheelVelocities<Time> wheelVels = new MecanumKinematics(1).inverse(
                 PoseVelocity2dDual.constant(powers, 1));
 
-        double maxPowerMag = 1;
+        double maxPowerMag = 0.75;
         for (DualNum<Time> power : wheelVels.all()) {
             maxPowerMag = Math.max(maxPowerMag, power.value());
         }
@@ -451,14 +451,14 @@ public final class MecanumDrive {
     public PoseVelocity2d updatePoseEstimate() {
         PoseVelocity2d vel = localizer.update();
         poseHistory.add(localizer.getPose());
-        
+
         while (poseHistory.size() > 100) {
             poseHistory.removeFirst();
         }
 
         estimatedPoseWriter.write(new PoseMessage(localizer.getPose()));
-        
-        
+
+
         return vel;
     }
 
