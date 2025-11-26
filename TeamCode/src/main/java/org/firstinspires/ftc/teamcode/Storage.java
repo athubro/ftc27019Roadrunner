@@ -35,6 +35,7 @@ public class Storage {
     private DistanceSensor frontDisSensor, middleDisSensor, backDisSensor;
     private NormalizedRGBA normalizedColors;
     private DcMotor activeIntake;
+    boolean flag = true;
 
     private ElapsedTime timer = new ElapsedTime();
     public String[] ballArray = {"N", "N", "N"};
@@ -42,29 +43,29 @@ public class Storage {
     public String middleBall = "N";
     public String backBall = "N";
     // 3-ball cases (only move the kicker at the target ball)
-    private void kickFront3()  { gate.setPosition(1); sleep(67);frontKick.setPosition(1); }
-    private void kickMiddle3() {gate.setPosition(0.85); sleep(67); middleKick.setPosition(1); }
-    private void kickBack3()   {gate.setPosition(0.85); sleep(67); backKick.setPosition(1); }
+    private void kickFront3()  { gate.setPosition(1); sleep(200);frontKick.setPosition(1); }
+    private void kickMiddle3() {gate.setPosition(0.85); sleep(200); middleKick.setPosition(1); }
+    private void kickBack3()   {gate.setPosition(0.85); sleep(200); backKick.setPosition(1); }
 
     // 2-ball targeted kicks
-    private void kickBack2Front()   { gate.setPosition(0.85); sleep(67); backKick.setPosition(1); sleep(67); middleKick.setPosition(1); }
-    private void kickBack2Middle()  {gate.setPosition(0.85); sleep(67); backKick.setPosition(1); sleep(67); frontKick.setPosition(1); }
-    private void kickMiddle2Front() { gate.setPosition(0.85); sleep(67); middleKick.setPosition(1); sleep(67); backKick.setPosition(1); }
-    private void kickMiddle2Back()  { gate.setPosition(0.85); sleep(67); middleKick.setPosition(1); sleep(67); frontKick.setPosition(1); }
-    private void kickFront2Back()   { gate.setPosition(1); sleep(67); frontKick.setPosition(1); sleep(67); middleKick.setPosition(1); }
-    private void kickFront2Middle() { gate.setPosition(1); sleep(67);frontKick.setPosition(1); sleep(67); backKick.setPosition(1); }
+    private void kickBack2Front()   { gate.setPosition(0.85); sleep(200); backKick.setPosition(1); sleep(200); middleKick.setPosition(1); }
+    private void kickBack2Middle()  {gate.setPosition(0.85); sleep(200); backKick.setPosition(1); sleep(200); frontKick.setPosition(1); }
+    private void kickMiddle2Front() { gate.setPosition(0.85); sleep(200); middleKick.setPosition(1); sleep(200); backKick.setPosition(1); }
+    private void kickMiddle2Back()  { gate.setPosition(0.85); sleep(200); middleKick.setPosition(1); sleep(200); frontKick.setPosition(1); }
+    private void kickFront2Back()   { gate.setPosition(1); sleep(67); frontKick.setPosition(1); sleep(200); middleKick.setPosition(1); }
+    private void kickFront2Middle() { gate.setPosition(1); sleep(67);frontKick.setPosition(1); sleep(200); backKick.setPosition(1); }
 
     // 1-ball cases (have to actuate all downstream kickers)
-    private void kickFront1()  {gate.setPosition(1); sleep(67); frontKick.setPosition(1); sleep(67); backKick.setPosition(1); sleep(67); middleKick.setPosition(1); }
-    private void kickMiddle1() { gate.setPosition(0.85); sleep(67); middleKick.setPosition(1); sleep(67); backKick.setPosition(1); sleep(67); frontKick.setPosition(1); }
-    private void kickBack1()   { gate.setPosition(0.85); sleep(67); backKick.setPosition(1); sleep(67); middleKick.setPosition(1); sleep(67); frontKick.setPosition(1); }
+    private void kickFront1()  {gate.setPosition(1); sleep(200); frontKick.setPosition(1); sleep(200); backKick.setPosition(1); sleep(200); middleKick.setPosition(1); }
+    private void kickMiddle1() { gate.setPosition(0.85); sleep(200); middleKick.setPosition(1); sleep(200); backKick.setPosition(1); sleep(200); frontKick.setPosition(1); }
+    private void kickBack1()   { gate.setPosition(0.85); sleep(200); backKick.setPosition(1); sleep(200); middleKick.setPosition(1); sleep(200); frontKick.setPosition(1); }
 
     public Storage(HardwareMap hardwareMap) {
         frontKick = hardwareMap.get(Servo.class, "frontKick");
         middleKick = hardwareMap.get(Servo.class, "middleKick");
         backKick = hardwareMap.get(Servo.class, "backKick");
         gate = hardwareMap.get(Servo.class, "gate");
-        transferServo = hardwareMap.get(CRServo.class, "transferServo");
+        transferServo = hardwareMap.get(CRServo.class, "transfer");
         activeIntake = hardwareMap.get(DcMotor.class, "activeIntake");
         // backKick : deepest slot
         // middleKick : 2nd deepest slot
@@ -96,8 +97,8 @@ public class Storage {
 
     }
 
-    // not used
-    /*
+
+
     private String detectBall (DistanceSensor distanceSensor, String slot) {
         String ball = "";
         double distance = distanceSensor.getDistance(DistanceUnit.CM);
@@ -128,17 +129,20 @@ public class Storage {
 
     }
 
-     */
+
     public void setIntakePower(double inputPower) {
-        if (inputPower > 0.15) {
+        if (inputPower > 0.1) {
             gate.setPosition(0);
             activeIntake.setPower(inputPower);
             transferServo.setPower(1);
-        } else if (inputPower < -0.15){
+        } else if (inputPower < -0.1){
             activeIntake.setPower(inputPower);
+            transferServo.setPower(0);
         }
         else {
             gate.setPosition(1);
+            transferServo.setPower(0);
+            activeIntake.setPower(0);
         }
     }
     public void openGate(){
@@ -172,7 +176,7 @@ public class Storage {
     public void kickFront() { frontKick.setPosition(1); }
     public void kickMiddle() { middleKick.setPosition(1); }
     public void kickBack() { backKick.setPosition(1); }
-    public void resetKick() {backKick.setPosition(0); sleep(67); middleKick.setPosition(0); sleep(67); frontKick.setPosition(0);  }
+    public void resetKick() {backKick.setPosition(0); sleep(67); middleKick.setPosition(0); sleep(67); frontKick.setPosition(0); flag = true; }
     private void sleep(int ms) { timer.reset(); while(timer.milliseconds() < ms) {} }
 
     // Automated loading for green ball
@@ -183,59 +187,58 @@ public class Storage {
     public void loadPurple() { loadBall("P"); }
 
     private void loadBall(String targetColor) { // "G" or "P"
-        update(); // Refresh sensor data
+       if (flag) {
+           //update(); // Refresh sensor data
 
-        String f = ballArray[0]; // front
-        String m = ballArray[1]; // middle
-        String b = ballArray[2]; // back
+           String f = ballArray[0]; // front
+           String m = ballArray[1]; // middle
+           String b = ballArray[2]; // back
+           flag = false;
+           // Count how many balls are currently in storage
+           int count = 0;
+           if (f.equals("N")) count++;
+           if (m.equals("N")) count++; //count is how many empty spaces
+           if (b.equals("N")) count++;
 
-        // Count how many balls are currently in storage
-        int count = 0;
-        if (!f.equals("N")) count++;
-        if (!m.equals("N")) count++; //count is how many empty spaces
-        if (!b.equals("N")) count++;
-
-        // Find the FIRST (closest to intake) ball that matches the target color
-        if (f.equals(targetColor)) {
-            // Target ball is in FRONT
-            if (count == 0) {
-                kickFront3();
-            } else if (count == 1) {
-                if (m.equals("N")) kickFront2Back();    // front + back
-                else               kickFront2Middle();  // front + middle
-            } else if (count == 2) {
-                kickFront1();
-            }
-        }
-        else if (m.equals(targetColor)) {
-            // Target ball is in MIDDLE
-            if (count == 0) {
-                kickMiddle3();
-            } else if (count == 1) {
-                if (f.equals("N")) kickMiddle2Back();   // middle + back
-                else {
-                    kickMiddle2Front();
-                }    // middle + front
-            } else if (count == 2) {
-                kickMiddle1();
-            }
-        }
-        else if (b.equals(targetColor)) {
-            // Target ball is in BACK
-            if (count == 0) {
-                kickBack3();
-            } else if (count == 1) {
-                if (f.equals("N")) kickBack2Middle();   // back + middle
-                else               kickBack2Front();    // back + front
-            } else if (count == 2) {
-                kickBack1();
-            }
-        }
+           // Find the FIRST (closest to intake) ball that matches the target color
+           if (f.equals(targetColor)) {
+               // Target ball is in FRONT
+               if (count == 0) {
+                   kickFront3();
+               } else if (count == 1) {
+                   if (m.equals("N")) kickFront2Back();    // front + back
+                   else kickFront2Middle();  // front + middle
+               } else if (count == 2) {
+                   kickFront1();
+               }
+           } else if (m.equals(targetColor)) {
+               // Target ball is in MIDDLE
+               if (count == 0) {
+                   kickMiddle3();
+               } else if (count == 1) {
+                   if (f.equals("N")) kickMiddle2Back();   // middle + back
+                   else {
+                       kickMiddle2Front();
+                   }    // middle + front
+               } else if (count == 2) {
+                   kickMiddle1();
+               }
+           } else if (b.equals(targetColor)) {
+               // Target ball is in BACK
+               if (count == 0) {
+                   kickBack3();
+               } else if (count == 1) {
+                   if (f.equals("N")) kickBack2Middle();   // back + middle
+                   else kickBack2Front();    // back + front
+               } else if (count == 2) {
+                   kickBack1();
+               }
+           }
+       }
         // If no matching ball found → do nothing
 
         // Always reset kickers and refresh state
-        resetKick();
-        update();
+        //update();
     }
 
     // Count balls in storage
