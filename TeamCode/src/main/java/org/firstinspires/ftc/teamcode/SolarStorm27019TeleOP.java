@@ -67,7 +67,7 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             // =========================
             // Mecanum Drive Controls (Gamepad2)
             // =========================
-            Vector2d translation = new Vector2d(-gamepad2.left_stick_y, gamepad2.left_stick_x);
+            Vector2d translation = new Vector2d(gamepad2.left_stick_y, gamepad2.left_stick_x);
             double rotation = gamepad2.right_stick_x;
             drive.setDrivePowers(new PoseVelocity2d(translation, rotation));
 
@@ -75,11 +75,19 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             // Kicker / Storage Updates
             // =========================
             kickers.update();  // senses colors and updates slot states
+            //
+            //
+            //
+            if (gamepad2.right_trigger > 0.1) kickers.setIntakePower(gamepad2.right_trigger);
 
+            if (gamepad2.left_trigger > 0.1) kickers.setIntakePower(-gamepad2.left_trigger);
+            if (gamepad2.right_bumper) kickers.openGate();
+            if (gamepad2.left_bumper) kickers.closeGate();
             // Automatic loading into nearest empty slot
-            if (gamepad2.x) kickers.loadGreen();
-            if (gamepad2.y) kickers.loadPurple();
-            if (gamepad2.b) kickers.resetKick();
+            if (gamepad1.x) kickers.loadGreen();
+            if (gamepad1.y) kickers.loadPurple();
+            if (gamepad1.b) kickers.resetKick();
+
 
             // Manual kicking using D-pad
             if (gamepad2.dpad_up) kickers.kickBack();
