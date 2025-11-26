@@ -19,8 +19,61 @@ public class Storage {
         public static int middleDisCheck = 5;
         public static double backGreenRatio = 3.0;
         public static double middleGreenRatio = 2.7;
-        public static double boundaryGreen = 0.05;
-        public static double boundaryUPPurple = 0.03;
+        public static double frontGreenRatio = 3.75;
+       //public static double boundaryGreen = 0.05;
+        //--------------------------------------------------------front boundaries------------------------------
+       public static double Front_GreenRedRatio_UpperBound_PurpleBall = 0.055;
+       //public static double boundaryUPPurple = 0.03;
+       public static double Front_GreenRedRatio_LowerBound_PurpleBall = 0.015;
+
+        public static double Front_BlueRedRatio_UpperBound_PurpleBall = 0.04;
+
+        public static double Front_BlueRedRatio_LowerBound_PurpleBall = -0.02;
+
+        public static double Front_GreenRedRatio_UpperBound_GreenBall = 0.03;
+        //public static double boundaryUPPurple = 0.03;
+        public static double Front_GreenRedRatio_LowerBound_GreenBall = -0.03;
+
+        public static double Front_BlueRedRatio_UpperBound_GreenBall = 0.01;
+
+        public static double Front_BlueRedRatio_LowerBound_GreenBall = -0.03;
+
+        //---------------------------------------------------middle Boundaries----------------------------------
+        public static double Middle_GreenRedRatio_UpperBound_PurpleBall = 0.03;
+        //public static double boundaryUPPurple = 0.03;
+        public static double Middle_GreenRedRatio_LowerBound_PurpleBall = -0.03;
+
+        public static double Middle_BlueRedRatio_UpperBound_PurpleBall = 0.04;
+
+        public static double Middle_BlueRedRatio_LowerBound_PurpleBall = -0.04;
+
+        public static double Middle_GreenRedRatio_UpperBound_GreenBall = 0.05;
+        //public static double boundaryUPPurple = 0.03;
+        public static double Middle_GreenRedRatio_LowerBound_GreenBall = -0.05;
+
+        public static double Middle_BlueRedRatio_UpperBound_GreenBall = 0.05;
+
+        public static double Middle_BlueRedRatio_LowerBound_GreenBall = -0.05;
+
+        //---------------------------------------------------------Back Boundaries------------------------------------
+
+        public static double Back_GreenRedRatio_UpperBound_PurpleBall = 0.03;
+        //public static double boundaryUPPurple = 0.03;
+        public static double Back_GreenRedRatio_LowerBound_PurpleBall = -0.03;
+
+        public static double Back_BlueRedRatio_UpperBound_PurpleBall = 0.04;
+
+        public static double Back_BlueRedRatio_LowerBound_PurpleBall = -0.04;
+
+        public static double Back_GreenRedRatio_UpperBound_GreenBall = 0.05;
+        //public static double boundaryUPPurple = 0.03;
+        public static double Back_GreenRedRatio_LowerBound_GreenBall = -0.05;
+
+        public static double Back_BlueRedRatio_UpperBound_GreenBall =0.05;
+
+        public static double Back_BlueRedRatio_LowerBound_GreenBall = -0.05;
+
+        //-----------------------------------------------------------------------------------------------------
         public static double boundaryLOWPurple = 0.04;
         public static double blueRedRatioGreen = 2.35;
         public static double blueRedRatioPurple = 2.02;
@@ -158,15 +211,61 @@ public class Storage {
         float B = normalizedColors.blue;
 
         double DisCheck = 3.7, greenRatio = 4.22;
+        double GR_LBound_P = 0.03;
+        double GR_UBound_P = 0.03;
+        double BR_LBound_P = 0.03;
+        double BR_UBound_P = 0.03;
+
+        double GR_LBound_G = 0.03;
+        double GR_UBound_G = 0.03;
+        double BR_LBound_G = 0.03;
+        double BR_UBound_G = 0.03;
+
         if (slot.equals("back")) { DisCheck = PARAMS.backDisCheck; greenRatio = PARAMS.backGreenRatio; }
+        if (slot.equals("back")) {
+            GR_LBound_P = PARAMS.Back_GreenRedRatio_LowerBound_PurpleBall;
+            GR_UBound_P = PARAMS.Back_GreenRedRatio_UpperBound_PurpleBall;
+            BR_LBound_P = PARAMS.Back_BlueRedRatio_LowerBound_PurpleBall;
+            BR_UBound_P = PARAMS.Back_GreenRedRatio_UpperBound_PurpleBall;
+
+            GR_LBound_G = PARAMS.Back_GreenRedRatio_LowerBound_GreenBall;
+            GR_UBound_G = PARAMS.Back_GreenRedRatio_UpperBound_GreenBall;
+            BR_LBound_G = PARAMS.Back_BlueRedRatio_LowerBound_GreenBall;
+            BR_UBound_G = PARAMS.Back_BlueRedRatio_UpperBound_GreenBall;
+        }
+        //---------------------------------------------------------------------------------------------------------
         if (slot.equals("middle")) { DisCheck = PARAMS.middleDisCheck; greenRatio = PARAMS.middleGreenRatio; }
-        if (slot.equals("front")) { DisCheck = PARAMS.frontDisCheck; }
+        if (slot.equals("middle")) {
+            GR_LBound_P = PARAMS.Middle_GreenRedRatio_LowerBound_PurpleBall;
+            GR_UBound_P = PARAMS.Middle_GreenRedRatio_UpperBound_PurpleBall;
+            BR_LBound_P = PARAMS.Middle_BlueRedRatio_LowerBound_PurpleBall;
+            BR_UBound_P = PARAMS.Middle_GreenRedRatio_UpperBound_PurpleBall;
+
+            GR_LBound_G = PARAMS.Middle_GreenRedRatio_LowerBound_GreenBall;
+            GR_UBound_G = PARAMS.Middle_GreenRedRatio_UpperBound_GreenBall;
+            BR_LBound_G = PARAMS.Middle_BlueRedRatio_LowerBound_GreenBall;
+            BR_UBound_G = PARAMS.Middle_BlueRedRatio_UpperBound_GreenBall;
+        }
+        //---------------------------
+        if (slot.equals("front")) { DisCheck = PARAMS.frontDisCheck; greenRatio = PARAMS.frontGreenRatio;}
+        if (slot.equals("front")) {
+            GR_LBound_P = PARAMS.Front_GreenRedRatio_LowerBound_PurpleBall;
+            GR_UBound_P = PARAMS.Front_GreenRedRatio_UpperBound_PurpleBall;
+            BR_LBound_P = PARAMS.Front_BlueRedRatio_LowerBound_PurpleBall;
+            BR_UBound_P = PARAMS.Front_GreenRedRatio_UpperBound_PurpleBall;
+
+            GR_LBound_G = PARAMS.Front_GreenRedRatio_LowerBound_GreenBall;
+            GR_UBound_G = PARAMS.Front_GreenRedRatio_UpperBound_GreenBall;
+            BR_LBound_G = PARAMS.Front_BlueRedRatio_LowerBound_GreenBall;
+            BR_UBound_G = PARAMS.Front_BlueRedRatio_UpperBound_GreenBall;
+        }
+        //-------------------------------
 
         double distance = distanceSensor.getDistance(DistanceUnit.CM);
 
-        if (G > (PARAMS.greenRedRatioPurple * R) - PARAMS.boundaryUPPurple && G < (PARAMS.greenRedRatioPurple * R) + PARAMS.boundaryUPPurple && B > (PARAMS.blueRedRatioPurple * R) - PARAMS.boundaryLOWPurple && B < (PARAMS.blueRedRatioPurple * R) + PARAMS.boundaryLOWPurple && distance < DisCheck)
+        if (G > (PARAMS.greenRedRatioPurple * R) + GR_LBound_P && G < (PARAMS.greenRedRatioPurple * R) + GR_UBound_P && B > (PARAMS.blueRedRatioPurple * R) + BR_LBound_P && B < (PARAMS.blueRedRatioPurple * R) +BR_UBound_P && distance < DisCheck)
             return "P";
-        else if (G > (greenRatio * R) - PARAMS.boundaryGreen && G < (greenRatio * R) + PARAMS.boundaryGreen && B > (PARAMS.blueRedRatioGreen * R) - PARAMS.boundaryGreen && B < (PARAMS.blueRedRatioGreen * R) + PARAMS.boundaryGreen && distance < DisCheck)
+        else if (G > (greenRatio * R) + GR_LBound_G && G < (greenRatio * R) + GR_UBound_G && B > (PARAMS.blueRedRatioGreen * R) + BR_LBound_G && B < (PARAMS.blueRedRatioGreen * R) + BR_UBound_G && distance < DisCheck)
             return "G";
         else
             return "N";
