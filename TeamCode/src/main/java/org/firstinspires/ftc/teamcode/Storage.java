@@ -14,29 +14,29 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 public class Storage {
     public static class Params {
-        public static int backDisCheck = 7;
-        public static int frontDisCheck = 3;
-        public static int middleDisCheck = 5;
+        public static double backDisCheck = 7;
+        public static double frontDisCheck = 3.7;
+        public static double middleDisCheck = 5;
         public static double backGreenRatio = 3.0;
         public static double middleGreenRatio = 2.7;
         public static double frontGreenRatio = 3.75;
        //public static double boundaryGreen = 0.05;
         //--------------------------------------------------------front boundaries------------------------------
-       public static double Front_GreenRedRatio_UpperBound_PurpleBall = 0.055;
+       public static double Front_GreenRedRatio_UpperBound_PurpleBall = 0.05; //0.055-->0.03
        //public static double boundaryUPPurple = 0.03;
-       public static double Front_GreenRedRatio_LowerBound_PurpleBall = 0.015;
+       public static double Front_GreenRedRatio_LowerBound_PurpleBall = -0.03;//0.015
 
         public static double Front_BlueRedRatio_UpperBound_PurpleBall = 0.04;
 
-        public static double Front_BlueRedRatio_LowerBound_PurpleBall = -0.02;
+        public static double Front_BlueRedRatio_LowerBound_PurpleBall = -0.04; //-0.02
 
-        public static double Front_GreenRedRatio_UpperBound_GreenBall = 0.03;
+        public static double Front_GreenRedRatio_UpperBound_GreenBall = 0.05;
         //public static double boundaryUPPurple = 0.03;
-        public static double Front_GreenRedRatio_LowerBound_GreenBall = -0.03;
+        public static double Front_GreenRedRatio_LowerBound_GreenBall = -0.05;
 
-        public static double Front_BlueRedRatio_UpperBound_GreenBall = 0.01;
+        public static double Front_BlueRedRatio_UpperBound_GreenBall = 0.05;
 
-        public static double Front_BlueRedRatio_LowerBound_GreenBall = -0.03;
+        public static double Front_BlueRedRatio_LowerBound_GreenBall = -0.05;
 
         //---------------------------------------------------middle Boundaries----------------------------------
         public static double Middle_GreenRedRatio_UpperBound_PurpleBall = 0.03;
@@ -80,9 +80,31 @@ public class Storage {
         public static double greenRedRatioPurple = 1.1;
 
     }
+
+    private static double midPos = 0.6;
+    private static int shortDelay = 40; //ms
+    private static int longDelay =1000; //ms
+    private static double gateMidPOs =0.6;
+
+    private static int gateDelay = 500; //ms
+
+    public boolean kick2StepFlag=false  ;
+    public double redReading1 = 0;
+    public double greenReading1 = 0;
+    public double blueReading1=0;
+    public double redReading2 = 0;
+    public double greenReading2 = 0;
+    public double blueReading2=0;
+    public double redReading3 = 0;
+    public double greenReading3 = 0;
+    public double blueReading3=0;
+
     public static Storage.Params PARAMS = new Storage.Params();
     private Servo frontKick, middleKick, backKick, gate;
     private CRServo transferServo;
+
+    public Servo rgbIndicator;
+
 
     private ColorSensor frontColorSensor, middleColorSensor, backColorSensor;
     private DistanceSensor frontDisSensor, middleDisSensor, backDisSensor;
@@ -90,28 +112,67 @@ public class Storage {
     private DcMotor activeIntake;
     boolean flag = true;
 
+    public int count;
+
+    private boolean intakeOn = false;
+    private boolean intakeInward = false; //false is outward, true is inward;
+
+    public String kickTarget="";
+    public double timeRN = 0;
+
+    public double frontPos = 0;
+    public double middlePos = 0;
+    public double backPos = 0;
+
+public double dis =0;
+
+    public boolean kickUp = false;
+
     private ElapsedTime timer = new ElapsedTime();
     public String[] ballArray = {"N", "N", "N"};
     public String frontBall = "N";
     public String middleBall = "N";
     public String backBall = "N";
     // 3-ball cases (only move the kicker at the target ball)
-    private void kickFront3()  { gate.setPosition(1); sleep(200);frontKick.setPosition(1); }
-    private void kickMiddle3() {gate.setPosition(0.85); sleep(200); middleKick.setPosition(1); }
-    private void kickBack3()   {gate.setPosition(0.85); sleep(200); backKick.setPosition(1); }
+    private void kickFront3()  { gate.setPosition(1); sleep(gateDelay);   kickFront();  }
+    private void kickFront3w2Step()  { gate.setPosition(1); sleep(gateDelay);frontKick.setPosition(midPos); sleep(longDelay);        kickFront();  }
+
+    private void kickMiddle3() {gate.setPosition(gateMidPOs); sleep(gateDelay); kickMiddle(); }
+    private void kickMiddle3w2Step() {gate.setPosition(gateMidPOs); sleep(gateDelay); middleKick.setPosition(midPos);  sleep(longDelay);         kickMiddle(); }
+
+    private void kickBack3()   {gate.setPosition(gateMidPOs); sleep(gateDelay); kickBack(); }
+
+    private void kickBack3w2Step ()   {gate.setPosition(gateMidPOs); sleep(gateDelay); backKick.setPosition(midPos); sleep(longDelay); kickBack(); }
 
     // 2-ball targeted kicks
-    private void kickBack2Front()   { gate.setPosition(0.85); sleep(200); backKick.setPosition(1); sleep(200); middleKick.setPosition(1); }
-    private void kickBack2Middle()  {gate.setPosition(0.85); sleep(200); backKick.setPosition(1); sleep(200); frontKick.setPosition(1); }
-    private void kickMiddle2Front() { gate.setPosition(0.85); sleep(200); middleKick.setPosition(1); sleep(200); backKick.setPosition(1); }
-    private void kickMiddle2Back()  { gate.setPosition(0.85); sleep(200); middleKick.setPosition(1); sleep(200); frontKick.setPosition(1); }
-    private void kickFront2Back()   { gate.setPosition(1); sleep(67); frontKick.setPosition(1); sleep(200); middleKick.setPosition(1); }
-    private void kickFront2Middle() { gate.setPosition(1); sleep(67);frontKick.setPosition(1); sleep(200); backKick.setPosition(1); }
+    private void kickBack2Front()   { gate.setPosition(gateMidPOs); sleep(gateDelay);  kickBack(); sleep(shortDelay); kickMiddle();}
+
+    private void kickBack2Front_2Step()   { gate.setPosition(gateMidPOs); sleep(gateDelay); backKick.setPosition(midPos); sleep(shortDelay); middleKick.setPosition(midPos);   sleep(longDelay);kickBack(); sleep(shortDelay); kickMiddle();}
+    private void kickBack2Middle()  {gate.setPosition(gateMidPOs); sleep(gateDelay);   kickBack(); sleep(shortDelay); kickFront();}
+
+    private void kickBack2Middle_2Step()  {gate.setPosition(gateMidPOs); sleep(gateDelay); backKick.setPosition(midPos); sleep(shortDelay); frontKick.setPosition(midPos);      sleep(longDelay); kickBack(); sleep(shortDelay); kickFront();}
+    private void kickMiddle2Front() { gate.setPosition(gateMidPOs); sleep(gateDelay);  kickMiddle(); sleep(shortDelay); kickBack();}
+
+    private void kickMiddle2Front_2Step() { gate.setPosition(gateMidPOs); sleep(gateDelay); middleKick.setPosition(midPos); sleep(shortDelay); backKick.setPosition(midPos);    sleep(longDelay); kickMiddle(); sleep(shortDelay); kickBack();}
+    private void kickMiddle2Back()  { gate.setPosition(gateMidPOs); sleep(gateDelay);  kickMiddle(); sleep(shortDelay); kickFront();}
+
+    private void kickMiddle2Back_2Step()  { gate.setPosition(gateMidPOs); sleep(gateDelay); middleKick.setPosition(midPos); sleep(shortDelay); frontKick.setPosition(midPos);    sleep(longDelay); kickMiddle(); sleep(shortDelay); kickFront();}
+    private void kickFront2Back()   { gate.setPosition(1); sleep(gateDelay); kickFront(); sleep(shortDelay); kickMiddle();}
+
+    private void kickFront2Back_2Step()   { gate.setPosition(1); sleep(gateDelay); frontKick.setPosition(midPos); sleep(shortDelay); middleKick.setPosition(midPos);   sleep(longDelay); kickFront(); sleep(shortDelay); kickMiddle();}
+    private void kickFront2Middle() { gate.setPosition(1); sleep(gateDelay); kickFront(); sleep(shortDelay); kickBack();}
+
+    private void kickFront2Middle_2Step() { gate.setPosition(1); sleep(gateDelay);frontKick.setPosition(midPos); sleep(shortDelay); backKick.setPosition(midPos);       sleep(longDelay);kickFront(); sleep(shortDelay); kickBack();}
 
     // 1-ball cases (have to actuate all downstream kickers)
-    private void kickFront1()  {gate.setPosition(1); sleep(200); frontKick.setPosition(1); sleep(200); backKick.setPosition(1); sleep(200); middleKick.setPosition(1); }
-    private void kickMiddle1() { gate.setPosition(0.85); sleep(200); middleKick.setPosition(1); sleep(200); backKick.setPosition(1); sleep(200); frontKick.setPosition(1); }
-    private void kickBack1()   { gate.setPosition(0.85); sleep(200); backKick.setPosition(1); sleep(200); middleKick.setPosition(1); sleep(200); frontKick.setPosition(1); }
+    private void kickFront1()  {gate.setPosition(1); sleep(gateDelay);   kickFront(); sleep(shortDelay); kickMiddle(); sleep(shortDelay); kickBack();  }
+
+    private void kickFront1_2Step()  {gate.setPosition(1); sleep(gateDelay);  frontKick.setPosition(midPos); sleep(shortDelay); backKick.setPosition(midPos); sleep(shortDelay); middleKick.setPosition(midPos);    sleep(longDelay);  kickFront(); sleep(shortDelay); kickMiddle(); sleep(shortDelay); kickBack();  }
+    private void kickMiddle1() { gate.setPosition(gateMidPOs); sleep(gateDelay);   kickMiddle(); sleep(shortDelay); kickBack(); sleep(shortDelay); kickFront();}
+
+    private void kickMiddle1_2Step() { gate.setPosition(gateMidPOs); sleep(gateDelay);  middleKick.setPosition(midPos); sleep(shortDelay); backKick.setPosition(midPos); sleep(shortDelay); frontKick.setPosition(midPos);   sleep(longDelay);  kickMiddle(); sleep(shortDelay);kickBack(); sleep(shortDelay); kickFront();}
+    private void kickBack1()   { gate.setPosition(gateMidPOs); sleep(gateDelay); kickBack(); sleep(shortDelay); kickMiddle(); sleep(shortDelay); kickFront(); }
+    private void kickBack1_2Step()   { gate.setPosition(gateMidPOs); sleep(gateDelay); backKick.setPosition(midPos); sleep(shortDelay); middleKick.setPosition(midPos); sleep(shortDelay); frontKick.setPosition(midPos);    sleep(longDelay); kickBack(); sleep(shortDelay); kickMiddle(); sleep(shortDelay); kickFront(); }
 
     public Storage(HardwareMap hardwareMap) {
         frontKick = hardwareMap.get(Servo.class, "frontKick");
@@ -120,6 +181,8 @@ public class Storage {
         gate = hardwareMap.get(Servo.class, "gate");
         transferServo = hardwareMap.get(CRServo.class, "transfer");
         activeIntake = hardwareMap.get(DcMotor.class, "activeIntake");
+
+        rgbIndicator = hardwareMap.get(Servo.class, "rgbIndicator");
         // backKick : deepest slot
         // middleKick : 2nd deepest slot
         //frontKick : closest to intake slot
@@ -144,13 +207,42 @@ public class Storage {
 
     // Update the color in each slot
     public void update() {
-        ballArray[0] = detectColor(frontColorSensor, frontDisSensor, "front");
-        ballArray[1] = detectColor(middleColorSensor, middleDisSensor, "middle");
-        ballArray[2] = detectColor(backColorSensor, backDisSensor, "back");
+        String f = ballArray[0] = detectColor(frontColorSensor, frontDisSensor, "front");
+        String m = ballArray[1] = detectColor(middleColorSensor, middleDisSensor, "middle");
+        String b = ballArray[2] = detectColor(backColorSensor, backDisSensor, "back");
+
+        dis = frontDisSensor.getDistance(DistanceUnit.CM);
+        // Count how many balls are currently in storage
+        count = 0;
+        if (f.equals("N")) count++;
+        if (m.equals("N")) count++; //count is how many empty spaces
+        if (b.equals("N")) count++;
+        timeRN=timer.time();
+        double timeCap = 2.5;
+        frontPos = frontKick.getPosition();
+        middlePos = middleKick.getPosition();
+        backPos = backKick.getPosition();
+        if (!flag) {
+            if (kickTarget.equals("front")) {
+                if (pastTime(timeCap)) {
+                    resetKick();
+                }
+            } else if (kickTarget.equals("middle")) {
+                if (pastTime(timeCap)) {
+                    resetKick();
+                }
+            } else if (kickTarget.equals("back")) {
+                if (pastTime(timeCap)) {
+                     resetKick();
+                }
+            }
+        }
 
     }
 
-
+public void color (double rgb) {
+    rgbIndicator.setPosition(rgb);
+}
 
     private String detectBall (DistanceSensor distanceSensor, String slot) {
         String ball = "";
@@ -183,17 +275,62 @@ public class Storage {
     }
 
 
+    public boolean isKickUp (String target) {
+        double floor = 0.9;
+        if (target.equals("front")) {
+            if (frontKick.getPosition() > floor) {
+                return true;
+            } else {
+                return false;
+            }
+        } else if (target.equals("middle")) {
+            if (middleKick.getPosition() > floor) {
+                return true;
+            } else {
+                return false;
+            }
+
+        } else if (target.equals("back")) {
+            if (backKick.getPosition() > floor) {
+                return true;
+            } else {
+                return false;
+            }
+
+        } else {
+            return false;
+        }
+
+    }
+
+    public boolean pastTime (double seconds) {
+        if (seconds < timer.time()) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     public void setIntakePower(double inputPower) {
         if (inputPower > 0.1) {
             gate.setPosition(0);
             activeIntake.setPower(inputPower);
+            intakeOn = true;
+            intakeInward = true;
+
+
             transferServo.setPower(1);
         } else if (inputPower < -0.1){
             activeIntake.setPower(inputPower);
             transferServo.setPower(0);
+            intakeOn = true;
+            intakeInward = false;
         }
         else {
-            gate.setPosition(1);
+            if(intakeOn && intakeInward) {
+                gate.setPosition(1);
+            }
+            intakeOn=false;
             transferServo.setPower(0);
             activeIntake.setPower(0);
         }
@@ -226,12 +363,15 @@ public class Storage {
             GR_LBound_P = PARAMS.Back_GreenRedRatio_LowerBound_PurpleBall;
             GR_UBound_P = PARAMS.Back_GreenRedRatio_UpperBound_PurpleBall;
             BR_LBound_P = PARAMS.Back_BlueRedRatio_LowerBound_PurpleBall;
-            BR_UBound_P = PARAMS.Back_GreenRedRatio_UpperBound_PurpleBall;
+            BR_UBound_P = PARAMS.Back_BlueRedRatio_UpperBound_PurpleBall;
 
             GR_LBound_G = PARAMS.Back_GreenRedRatio_LowerBound_GreenBall;
             GR_UBound_G = PARAMS.Back_GreenRedRatio_UpperBound_GreenBall;
             BR_LBound_G = PARAMS.Back_BlueRedRatio_LowerBound_GreenBall;
             BR_UBound_G = PARAMS.Back_BlueRedRatio_UpperBound_GreenBall;
+            redReading3=R;
+            blueReading3=B;
+            greenReading3=G;
         }
         //---------------------------------------------------------------------------------------------------------
         if (slot.equals("middle")) { DisCheck = PARAMS.middleDisCheck; greenRatio = PARAMS.middleGreenRatio; }
@@ -239,12 +379,15 @@ public class Storage {
             GR_LBound_P = PARAMS.Middle_GreenRedRatio_LowerBound_PurpleBall;
             GR_UBound_P = PARAMS.Middle_GreenRedRatio_UpperBound_PurpleBall;
             BR_LBound_P = PARAMS.Middle_BlueRedRatio_LowerBound_PurpleBall;
-            BR_UBound_P = PARAMS.Middle_GreenRedRatio_UpperBound_PurpleBall;
+            BR_UBound_P = PARAMS.Middle_BlueRedRatio_UpperBound_PurpleBall;
 
             GR_LBound_G = PARAMS.Middle_GreenRedRatio_LowerBound_GreenBall;
             GR_UBound_G = PARAMS.Middle_GreenRedRatio_UpperBound_GreenBall;
             BR_LBound_G = PARAMS.Middle_BlueRedRatio_LowerBound_GreenBall;
             BR_UBound_G = PARAMS.Middle_BlueRedRatio_UpperBound_GreenBall;
+            redReading2=R;
+            blueReading2=B;
+            greenReading2=G;
         }
         //---------------------------
         if (slot.equals("front")) { DisCheck = PARAMS.frontDisCheck; greenRatio = PARAMS.frontGreenRatio;}
@@ -252,12 +395,15 @@ public class Storage {
             GR_LBound_P = PARAMS.Front_GreenRedRatio_LowerBound_PurpleBall;
             GR_UBound_P = PARAMS.Front_GreenRedRatio_UpperBound_PurpleBall;
             BR_LBound_P = PARAMS.Front_BlueRedRatio_LowerBound_PurpleBall;
-            BR_UBound_P = PARAMS.Front_GreenRedRatio_UpperBound_PurpleBall;
+            BR_UBound_P = PARAMS.Front_BlueRedRatio_UpperBound_PurpleBall;
 
             GR_LBound_G = PARAMS.Front_GreenRedRatio_LowerBound_GreenBall;
             GR_UBound_G = PARAMS.Front_GreenRedRatio_UpperBound_GreenBall;
             BR_LBound_G = PARAMS.Front_BlueRedRatio_LowerBound_GreenBall;
             BR_UBound_G = PARAMS.Front_BlueRedRatio_UpperBound_GreenBall;
+            redReading1=R;
+            blueReading1=B;
+            greenReading1=G;
         }
         //-------------------------------
 
@@ -272,11 +418,15 @@ public class Storage {
     }
 
     // Kickers
-    public void kickFront() { frontKick.setPosition(1); }
-    public void kickMiddle() { middleKick.setPosition(1); }
-    public void kickBack() { backKick.setPosition(1); }
-    public void resetKick() {backKick.setPosition(0); sleep(67); middleKick.setPosition(0); sleep(67); frontKick.setPosition(0); flag = true; }
+    public void kickFront() { kickUp = true; frontKick.setPosition(1); }
+    public void kickMiddle() {  kickUp = true;middleKick.setPosition(1); }
+    public void kickBack() {  kickUp = true;backKick.setPosition(1); }
+    public void resetKick() {kickUp = false; backKick.setPosition(0); sleep(67); middleKick.setPosition(0); sleep(67); frontKick.setPosition(0); gate.setPosition(1); flag = true; }
     private void sleep(int ms) { timer.reset(); while(timer.milliseconds() < ms) {} }
+    double currentTime = 0;
+    private void timeReset() {timer.reset();}
+
+
 
     // Automated loading for green ball
     public void loadGreen() { loadBall("G"); }
@@ -287,50 +437,93 @@ public class Storage {
 
     private void loadBall(String targetColor) { // "G" or "P"
        if (flag) {
-           //update(); // Refresh sensor data
+           update(); // Refresh sensor data
 
            String f = ballArray[0]; // front
            String m = ballArray[1]; // middle
            String b = ballArray[2]; // back
            flag = false;
            // Count how many balls are currently in storage
-           int count = 0;
-           if (f.equals("N")) count++;
-           if (m.equals("N")) count++; //count is how many empty spaces
-           if (b.equals("N")) count++;
 
+            if (targetColor.equals("P")) {
+                color(0.722);
+            } else if (targetColor.equals("G")) {
+                color(0.5);
+            }
            // Find the FIRST (closest to intake) ball that matches the target color
-           if (f.equals(targetColor)) {
+           if (b.equals(targetColor)) {
                // Target ball is in FRONT
                if (count == 0) {
-                   kickFront3();
+                   kickTarget ="back";
+                   timeReset();
+                   kickBack3();
+
                } else if (count == 1) {
-                   if (m.equals("N")) kickFront2Back();    // front + back
-                   else kickFront2Middle();  // front + middle
+                   if (m.equals("N")) {
+                       kickTarget ="back";
+                       timeReset();
+                       kickBack2Front();    // front + back
+                   }
+                   else {
+                       timeReset();
+                       kickTarget ="back";
+                       kickBack2Middle();  // front + middle
+                   }
                } else if (count == 2) {
-                   kickFront1();
+                   kickTarget ="back";
+                   timeReset();
+                   kickBack1();
+
                }
            } else if (m.equals(targetColor)) {
                // Target ball is in MIDDLE
                if (count == 0) {
+                   kickTarget ="middle";
+                   timeReset();
                    kickMiddle3();
                } else if (count == 1) {
-                   if (f.equals("N")) kickMiddle2Back();   // middle + back
+                   if (f.equals("N")) {
+                       kickTarget ="middle";
+                       timeReset();
+                       kickMiddle2Back();   // middle + back
+
+                   }
                    else {
+                       kickTarget ="middle";
+                       timeReset();
                        kickMiddle2Front();
-                   }    // middle + front
+                   }     //middle + front
                } else if (count == 2) {
+                   kickTarget ="middle";
+                   timeReset();
                    kickMiddle1();
+
                }
-           } else if (b.equals(targetColor)) {
+           } else if (f.equals(targetColor)) {
                // Target ball is in BACK
                if (count == 0) {
-                   kickBack3();
+                   kickTarget ="front";
+                   timeReset();
+                   kickFront3();
+
                } else if (count == 1) {
-                   if (f.equals("N")) kickBack2Middle();   // back + middle
-                   else kickBack2Front();    // back + front
+                   if (b.equals("N")) {
+                       kickTarget ="front";
+                       timeReset();
+                       kickFront2Middle();   // back + middle
+
+                   }
+                   else {
+                       kickTarget ="front";
+                       timeReset();
+                       kickFront2Back();    // back + front
+
+                   }
                } else if (count == 2) {
-                   kickBack1();
+                   kickTarget ="front";
+                   timeReset();
+                   kickFront1();
+
                }
            }
        }
@@ -340,6 +533,119 @@ public class Storage {
         //update();
     }
 
+
+    private void loadBallw2StepKick(String targetColor) { // "G" or "P"
+        if (flag) {
+            update(); // Refresh sensor data
+
+            String f = ballArray[0]; // front
+            String m = ballArray[1]; // middle
+            String b = ballArray[2]; // back
+            flag = false;
+            // Count how many balls are currently in storage
+
+            if (targetColor.equals("P")) {
+                // color(0.722);
+            } else if (targetColor.equals("G")) {
+              //  color(0.5);
+            }
+            // Find the FIRST (closest to intake) ball that matches the target color
+            if (b.equals(targetColor)) {
+                // Target ball is in FRONT
+                if (count == 0) {
+                    kickTarget ="back";
+                    timeReset();
+                    if (kick2StepFlag){ kickBack3w2Step();}
+                    else {kickBack3();}
+
+                } else if (count == 1) {
+                    if (m.equals("N")) {
+                        kickTarget ="back";
+                        timeReset();
+                        if (kick2StepFlag) { kickBack2Front_2Step();}
+                        else {
+                            kickBack2Front();
+                        }// front + back
+                    }
+                    else {
+                        timeReset();
+                        kickTarget ="back";
+                        if (kick2StepFlag) {kickBack2Middle_2Step();}
+                        else {kickBack2Middle();}  // front + middle
+                    }
+                } else if (count == 2) {
+                    kickTarget ="back";
+                    timeReset();
+                    if (kick2StepFlag) {kickBack1_2Step();}
+                    else {kickBack1();}
+
+                }
+            } else if (m.equals(targetColor)) {
+                // Target ball is in MIDDLE
+                if (count == 0) {
+                    kickTarget ="middle";
+                    timeReset();
+                    if (kick2StepFlag) {kickMiddle3w2Step();}
+                    else {kickMiddle3();}
+
+                } else if (count == 1) {
+                    if (f.equals("N")) {
+                        kickTarget ="middle";
+                        timeReset();
+                        if (kick2StepFlag) {kickMiddle2Back_2Step();}
+                        else {kickMiddle2Back();  } // middle + back
+
+                    }
+                    else {
+                        kickTarget ="middle";
+                        timeReset();
+                        if (kick2StepFlag) {kickMiddle2Front_2Step();}
+                        else {kickMiddle2Front();}
+                    }     //middle + front
+                } else if (count == 2) {
+                    kickTarget ="middle";
+                    timeReset();
+                    if (kick2StepFlag) {kickMiddle1_2Step();}
+                    else {kickMiddle1();}
+
+                }
+            } else if (f.equals(targetColor)) {
+                // Target ball is in BACK
+                if (count == 0) {
+                    kickTarget ="front";
+                    timeReset();
+                    if (kick2StepFlag) {kickFront3w2Step();}
+                    else {kickFront3();}
+
+                } else if (count == 1) {
+                    if (b.equals("N")) {
+                        kickTarget ="front";
+                        timeReset();
+                        if (kick2StepFlag) {kickFront2Middle_2Step();}
+                        else {kickFront2Middle(); }  // back + middle
+
+                    }
+                    else {
+                        kickTarget ="front";
+                        timeReset();
+                        if (kick2StepFlag) {kickFront2Back_2Step();}
+                        else {kickFront2Back();}    // back + front
+
+                    }
+                } else if (count == 2) {
+                    kickTarget ="front";
+                    timeReset();
+                    if (kick2StepFlag) {kickFront1_2Step();}
+                    else {kickFront1();}
+
+                }
+            }
+        }
+        // If no matching ball found → do nothing
+
+        // Always reset kickers and refresh state
+        //update();
+    }
     // Count balls in storage
     public int ballCount() {
         int count = 0;

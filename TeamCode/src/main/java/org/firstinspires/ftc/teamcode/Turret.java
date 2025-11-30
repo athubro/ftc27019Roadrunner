@@ -41,47 +41,72 @@ public final class Turret {
     public static Params PARAMS = new Params();
 
     // Hardware
-    private final CRServo turret;          // continuous servo for yaw control
-    private final Servo turretAngle;       // regular servo controlling turret angle
-    private final Limelight3A limelight;
-    private final DcMotor leftMotor;       // shooter left
-    private final DcMotor rightMotor;      // shooter right
-    private final FtcDashboard dashboard;
+    public final CRServo turret;          // continuous servo for yaw control
+    public final Servo turretAngle;       // regular servo controlling turret angle
+    public final Limelight3A limelight;
+
+    public double disToAprilTag = 0;
+
+    public double ATAngle = 0;
+
+    //constants for measuring distance
+
+    public final double  ATHeight = 29.5; //inches
+    public final double LimelightHeight = 11.75; //inches
+
+    public final double LimelightAngle = 20; //degrees fron horizontal position
+    public final DcMotor leftMotor;       // shooter left
+    public final DcMotor rightMotor;      // shooter right
+    public final FtcDashboard dashboard;
+    public Servo rgbIndicator;
 
     // External telemetry (supplied by caller)
-    private final Telemetry telemetry;
+    public final Telemetry telemetry;
 
     // State (shooter PID)
-    private final ElapsedTime timer = new ElapsedTime();
-    private final ElapsedTime pidTimer = new ElapsedTime();
+    public final ElapsedTime timer = new ElapsedTime();
+    public final ElapsedTime pidTimer = new ElapsedTime();
 
-    private double lastTime = 0.0;
-    private int lastPositionLeft = 0;
-    private int lastPositionRight = 0;
+    public double lastTime = 0.0;
+    public int lastPositionLeft = 0;
+    public int lastPositionRight = 0;
 
-    private double integralLeft = 0.0;
-    private double lastErrorLeft = 0.0;
-    private double outputPowerLeft = 0.0;
-    private double currentRPMLeft = 0.0;
+    public double integralLeft = 0.0;
+    public double lastErrorLeft = 0.0;
+    public double outputPowerLeft = 0.0;
+    public double currentRPMLeft = 0.0;
 
-    private double integralRight = 0.0;
-    private double lastErrorRight = 0.0;
-    private double outputPowerRight = 0.0;
-    private double currentRPMRight = 0.0;
+    public double integralRight = 0.0;
+    public double lastErrorRight = 0.0;
+    public double outputPowerRight = 0.0;
+    public double currentRPMRight = 0.0;
+
 
     // Turret tracking & control state
     public boolean trackingMode = false;   // whether limelight auto-tracks
-    private double lastDirection = 1.0;    // last search direction when tag lost
+    public double lastDirection = 1.0;    // last search direction when tag lost
 
     // Turret angle state (for Servo position)
-    private double turretAnglePos = 0.5;   // start at middle position
+    public double turretAnglePos = 0.5;   // start at middle position
     private static final double TURRET_ANGLE_STEP = 0.009;
 
+    public double targetAngle = 1;
+
     // External inputs (set by caller)
-    private boolean shootingEnabled = false;
-    private double manualTurretInput = 0.0; // store joystick value; update() applies it
-    private int turretAngleCommand = 0;     // -1 left, 0 stop, 1 right (previously D-PAD)
-    private double targetRPM = 4500.0;      // can be changed via setter
+    public boolean shootingEnabled = false;
+    public double manualTurretInput = 0.0; // store joystick value; update() applies it
+    public int turretAngleCommand = 0;     // -1 left, 0 stop, 1 right (previously D-PAD)
+    public double targetRPM = 3000.0;      // can be changed via setter
+    double lastShotTimer =0;
+    public double lastLeftRPM = 0;
+    public double lastRightRPM = 0;
+
+    public double shotDetectLastTime = 0;
+    public boolean shotDetected = false;
+
+    public final double RPMDerivativeThreshold = 4000;
+    public double leftDerivative=0;
+    public double rightDerivative=0;
 
     // Constructor
     public Turret(HardwareMap hardwareMap, Telemetry telemetry) {
@@ -92,6 +117,9 @@ public final class Turret {
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         leftMotor = hardwareMap.get(DcMotor.class, "left motor");
         rightMotor = hardwareMap.get(DcMotor.class, "right motor");
+
+        rgbIndicator = hardwareMap.get(Servo.class, "rgbIndicator");
+
 
         rightMotor.setDirection(DcMotor.Direction.REVERSE);
 
@@ -142,13 +170,17 @@ public final class Turret {
     public double getCurrentRPMRight() { return currentRPMRight; }
     public double getTargetRPM() { return targetRPM; }
 
+    public void color (double rgb) {
+        rgbIndicator.setPosition(rgb);
+    }
+
     // -------------------------
     // Main update (call once per loop)
     // -------------------------
     public void update() {
         // update shooter PID (non-blocking)
         pidUpdate();
-
+        shotDetection();
         // update turret yaw (non-blocking; either tracking or manual)
         updateTurretControl();
 
@@ -192,6 +224,11 @@ public final class Turret {
         double errorRight = targetRPM - currentRPMRight;
         if (Math.abs(errorRight) < PARAMS.toleranceRPM/2) {
             errorRight = 0;
+            color(0.48);
+        } else if (Math.abs(errorRight) < 150) {
+            color(0.333);
+        } else {
+            color(0.27);
         }
         integralRight += errorRight * deltaTime;
         double derivativeRight = (errorRight - lastErrorRight) / deltaTime;
@@ -218,6 +255,47 @@ public final class Turret {
         }
     }
 
+    public void shotDetection(){
+
+        double deltaTime = 0;
+        double deltaLeftRPM = 0;
+        double deltaRightRPM = 0;
+        leftDerivative = 0;
+        rightDerivative = 0;
+        if (shotDetectLastTime==0) shotDetectLastTime=timer.time();
+        deltaTime = timer.time() - shotDetectLastTime;
+
+        if (deltaTime < Params.PID_INTERVAL) return;
+        shotDetectLastTime = timer.time();
+
+        if ( !(lastLeftRPM == 0 || lastRightRPM == 0))
+        {
+            deltaLeftRPM = currentRPMLeft - lastLeftRPM;
+            deltaRightRPM = currentRPMRight - lastRightRPM;
+
+
+            
+            leftDerivative = deltaLeftRPM/deltaTime;
+            rightDerivative = deltaRightRPM/deltaTime;
+            
+            
+            
+            if (leftDerivative < -RPMDerivativeThreshold && rightDerivative < - RPMDerivativeThreshold) {
+                shotDetected = true;
+                lastShotTimer = timer.time();
+            } else {
+                
+                if (timer.time() - lastShotTimer > 1 && shotDetected) {
+                    shotDetected = false;
+                }
+                
+            }
+        }
+        lastLeftRPM=currentRPMLeft;
+        lastRightRPM=currentRPMRight;
+    }
+
+
     // Non-blocking turret yaw control: tracking or manual
     private void updateTurretControl() {
         double turretPower = 0.0;
@@ -231,7 +309,9 @@ public final class Turret {
                 for (LLResultTypes.FiducialResult fid : result.getFiducialResults()) {
                     if (fid.getFiducialId() == Params.TARGET_TAG_ID) {
                         tagFound = true;
-                        errorAngleDeg = fid.getTargetXDegrees();
+                        errorAngleDeg = fid.getTargetXDegrees() - targetAngle;
+                        ATAngle = fid.getTargetYDegrees();
+                        measureDis();
                         break;
                     }
                 }
@@ -263,6 +343,10 @@ public final class Turret {
         telemetryData.turretPower = turretPower;
     }
 
+    public void measureDis() {
+        disToAprilTag = (ATHeight - LimelightHeight) / Math.tan((ATAngle+LimelightAngle)*(Math.PI/180));
+    }
+
     private void updateTurretAngle() {
         // turretAngleCommand changes the stored position incrementally
         if (turretAngleCommand > 0) {
@@ -283,7 +367,7 @@ public final class Turret {
         packet.put("Right RPM", currentRPMRight);
         packet.put("Target RPM", targetRPM);
         dashboard.sendTelemetryPacket(packet);
-
+        /*
         telemetry.addLine("=== SHOOTER PID ===");
         telemetry.addData("Left Motor RPM", "%.1f", currentRPMLeft);
         telemetry.addData("Right Motor RPM", "%.1f", currentRPMRight);
@@ -303,6 +387,8 @@ public final class Turret {
         telemetry.addData("Turret Angle Position", "%.3f", telemetryData.turretAnglePower);
 
         telemetry.update();
+
+         */
     }
 
     // -------------------------
@@ -312,11 +398,11 @@ public final class Turret {
         return Math.max(lo, Math.min(hi, v));
     }
 
-    private static class TelemetryData {
+    public static class TelemetryData {
         boolean tagFound = false;
         double errorAngleDeg = 0.0;
         double turretPower = 0.0;
         double turretAnglePower = 0.0;
     }
-    private final TelemetryData telemetryData = new TelemetryData();
+    public final TelemetryData telemetryData = new TelemetryData();
 }

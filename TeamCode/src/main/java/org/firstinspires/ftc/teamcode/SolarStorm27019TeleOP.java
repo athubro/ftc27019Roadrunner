@@ -13,18 +13,25 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
     private MecanumDrive drive;
     private Storage kickers;  // intake-free storage class
     private Pose2d pose = new Pose2d(0, 0, 0);
-
+    private boolean waitingForConfig = true;
     @Override
     public void runOpMode() {
 
         // Initialize all systems
         turretSystem = new Turret(hardwareMap, telemetry);
         drive = new MecanumDrive(hardwareMap, pose);
-        telemetry.addLine("new build");
-        telemetry.update();
         kickers = new Storage(hardwareMap);  // intake-free kicker class
-
-        telemetry.addLine("Turret + Drive + Kickers Ready");
+        while (waitingForConfig){
+            telemetry.addLine("new build");
+            telemetry.addLine("Turret + Drive + Kickers Ready");
+            telemetry.addLine("Press pad-1 X to change kick2Step Flag");
+            telemetry.addLine("Press pad-1 Y when finish! Don't start it now!");
+            telemetry.addData("TWO-Step kicker", kickers.kick2StepFlag);
+            telemetry.update();
+            if (gamepad1.xWasReleased()) {kickers.kick2StepFlag=!kickers.kick2StepFlag;}
+            if (gamepad1.yWasReleased()) {waitingForConfig=false;}
+        }
+        telemetry.addLine("Now you can start!");
         telemetry.update();
         waitForStart();
 
@@ -41,9 +48,9 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             turretSystem.setShootingEnabled(gamepad1.right_trigger > 0.1);
 
             if (gamepad1.dpad_up && !dpadUpLast)
-                turretSystem.setTargetRPM(turretSystem.getTargetRPM() + 25.0);
+                turretSystem.setTargetRPM(turretSystem.getTargetRPM() + 50.0);
             if (gamepad1.dpad_down && !dpadDownLast)
-                turretSystem.setTargetRPM(Math.max(0, turretSystem.getTargetRPM() - 25.0));
+                turretSystem.setTargetRPM(Math.max(0, turretSystem.getTargetRPM() - 50.0));
 
             dpadUpLast = gamepad1.dpad_up;
             dpadDownLast = gamepad1.dpad_down;
@@ -62,7 +69,7 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             else
                 turretSystem.setTurretAngleCommand(0);
 
-            turretSystem.update();
+
 
             // =========================
             // Mecanum Drive Controls (Gamepad2)
@@ -70,7 +77,7 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             Vector2d translation = new Vector2d(-gamepad2.left_stick_y, -gamepad2.left_stick_x);
             double rotation = -gamepad2.right_stick_x;
             drive.setDrivePowers(new PoseVelocity2d(translation, rotation));
-
+            turretSystem.update();
             // =========================
             // Kicker / Storage Updates
             // =========================
@@ -78,6 +85,10 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             //
             //
             //
+            if (kickers.kickUp && turretSystem.shotDetected) {
+                kickers.resetKick();
+                turretSystem.shotDetected = false;
+            }
             if(gamepad2.right_trigger > 0.1) kickers.setIntakePower(gamepad2.right_trigger);
             else if (gamepad2.left_trigger > 0.1)kickers.setIntakePower(-gamepad2.left_trigger);
             else kickers.setIntakePower(0);
@@ -97,9 +108,51 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             if (gamepad2.dpad_down) kickers.kickFront();
 
             // Optional telemetry for debugging
+            telemetry.addData("timer", kickers.timeRN);
+            //telemetry.addData("RPM", turretSystem.getTargetRPM());
+
+
+            telemetry.addData("front dis", kickers.dis);
+            telemetry.addData("front pos", kickers.frontPos);
+            telemetry.addData("middle pos", kickers.middlePos);
+            telemetry.addData("back pos", kickers.backPos);
+            telemetry.addData("Kick Target", kickers.kickTarget);
+
+            telemetry.addData("Ball Count", kickers.count);
             telemetry.addData("Front Slot", kickers.ballArray[0]);
+            telemetry.addData("Front reading Red", kickers.redReading1);
+            telemetry.addData("Front reading Green", kickers.greenReading1);
+            telemetry.addData("Front reading blue", kickers.blueReading1);
             telemetry.addData("Middle Slot", kickers.ballArray[1]);
+            telemetry.addData("Middle reading Red", kickers.redReading2);
+            telemetry.addData("Middle reading Green", kickers.greenReading2);
+            telemetry.addData("Middle reading blue", kickers.blueReading2);
             telemetry.addData("Back Slot", kickers.ballArray[2]);
+            telemetry.addData("Back reading Red", kickers.redReading3);
+            telemetry.addData("Back reading Green", kickers.greenReading3);
+            telemetry.addData("Back reading blue", kickers.blueReading3);
+
+            telemetry.addLine("=== SHOOTER PID ===");
+            telemetry.addData("Left Motor RPM", "%.1f", turretSystem.currentRPMLeft);
+            telemetry.addData("Right Motor RPM", "%.1f", turretSystem.currentRPMRight);
+            //telemetry.addData("Left Motor power", "%.2f", turretSystem.leftMotor.getPower());
+            //telemetry.addData("Right Motor power", "%.2f", turretSystem.rightMotor.getPower());
+            //telemetry.addData("Left ticks", turretSystem.leftMotor.getCurrentPosition());
+            //telemetry.addData("Right ticks", turretSystem.rightMotor.getCurrentPosition());
+            telemetry.addData("Target RPM", "%.1f", turretSystem.targetRPM);
+            telemetry.addData("Left RPM Derivative",  "%.1f", turretSystem.leftDerivative);
+            telemetry.addData("Right RPM Derivative",  "%.1f", turretSystem.rightDerivative);
+            telemetry.addData("shotdetected", turretSystem.shotDetected);
+            telemetry.addLine("=== TURRET TRACKING ===");
+            telemetry.addData("Tracking Mode", turretSystem.trackingMode ? "ON" : "OFF");
+            telemetry.addData("Tag Visible", turretSystem.telemetryData.tagFound);
+            telemetry.addData("Error Angle (deg)", "%.2f", turretSystem.telemetryData.errorAngleDeg);
+            telemetry.addData("Turret Power", "%.3f", turretSystem.telemetryData.turretPower);
+            telemetry.addData("calculated distance in inches ", turretSystem.disToAprilTag);
+            telemetry.addData("measured angle of april tag ", turretSystem.ATAngle);
+            telemetry.addLine("=== TURRET ANGLE ===");
+            telemetry.addData("Turret Angle Position", "%.3f", turretSystem.telemetryData.turretAnglePower);
+
             telemetry.update();
         }
     }
