@@ -15,7 +15,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 public class Storage {
     public static class Params {
         public static double backDisCheck = 7;
-        public static double frontDisCheck = 3.7;
+        public static double frontDisCheck = 3.4;
         public static double middleDisCheck = 5;
         public static double backGreenRatio = 3.0;
         public static double middleGreenRatio = 2.7;

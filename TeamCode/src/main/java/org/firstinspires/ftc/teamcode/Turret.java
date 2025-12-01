@@ -54,7 +54,7 @@ public final class Turret {
     public final double  ATHeight = 29.5; //inches
     public final double LimelightHeight = 11.75; //inches
 
-    public final double LimelightAngle = 20; //degrees fron horizontal position
+    public final double LimelightAngle = 22.77; //degrees fron horizontal position
     public final DcMotor leftMotor;       // shooter left
     public final DcMotor rightMotor;      // shooter right
     public final FtcDashboard dashboard;
@@ -224,7 +224,7 @@ public final class Turret {
         double errorRight = targetRPM - currentRPMRight;
         if (Math.abs(errorRight) < PARAMS.toleranceRPM/2) {
             errorRight = 0;
-            color(0.48);
+            color(0.611);
         } else if (Math.abs(errorRight) < 150) {
             color(0.333);
         } else {

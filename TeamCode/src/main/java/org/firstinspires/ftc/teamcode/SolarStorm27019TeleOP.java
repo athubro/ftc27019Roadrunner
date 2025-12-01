@@ -100,6 +100,7 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             if (gamepad1.x) kickers.loadGreen();
             if (gamepad1.y) kickers.loadPurple();
             if (gamepad2.b) kickers.resetKick();
+            if (gamepad1.b) kickers.resetKick();
 
 
             // Manual kicking using D-pad
