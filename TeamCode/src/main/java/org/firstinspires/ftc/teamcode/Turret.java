@@ -55,6 +55,8 @@ public final class Turret {
     public final double LimelightHeight = 11.75; //inches
 
     public final double LimelightAngle = 22.77; //degrees fron horizontal position
+
+    public final double targetSpeedLinearSplit = 46;
     public final DcMotor leftMotor;       // shooter left
     public final DcMotor rightMotor;      // shooter right
     public final FtcDashboard dashboard;
@@ -84,6 +86,8 @@ public final class Turret {
 
     // Turret tracking & control state
     public boolean trackingMode = false;   // whether limelight auto-tracks
+
+    public boolean tagFound = false;
     public double lastDirection = 1.0;    // last search direction when tag lost
 
     // Turret angle state (for Servo position)
@@ -178,11 +182,15 @@ public final class Turret {
     // Main update (call once per loop)
     // -------------------------
     public void update() {
+
+        updateTurretControl();
         // update shooter PID (non-blocking)
+        calcTargetAngleSpeed();
         pidUpdate();
         shotDetection();
         // update turret yaw (non-blocking; either tracking or manual)
-        updateTurretControl();
+
+        //updateTurretControl();
 
         // update turret angle servo (non-blocking)
         updateTurretAngle();
@@ -274,21 +282,21 @@ public final class Turret {
             deltaRightRPM = currentRPMRight - lastRightRPM;
 
 
-            
+
             leftDerivative = deltaLeftRPM/deltaTime;
             rightDerivative = deltaRightRPM/deltaTime;
-            
-            
-            
+
+
+
             if (leftDerivative < -RPMDerivativeThreshold && rightDerivative < - RPMDerivativeThreshold) {
                 shotDetected = true;
                 lastShotTimer = timer.time();
             } else {
-                
+
                 if (timer.time() - lastShotTimer > 1 && shotDetected) {
                     shotDetected = false;
                 }
-                
+
             }
         }
         lastLeftRPM=currentRPMLeft;
@@ -299,7 +307,7 @@ public final class Turret {
     // Non-blocking turret yaw control: tracking or manual
     private void updateTurretControl() {
         double turretPower = 0.0;
-        boolean tagFound = false;
+         tagFound = false;
         double errorAngleDeg = 0.0;
 
         if (trackingMode) {
@@ -344,7 +352,29 @@ public final class Turret {
     }
 
     public void measureDis() {
-        disToAprilTag = (ATHeight - LimelightHeight) / Math.tan((ATAngle+LimelightAngle)*(Math.PI/180));
+        if (tagFound) {
+            disToAprilTag = (ATHeight - LimelightHeight) / Math.tan((ATAngle + LimelightAngle) * (Math.PI / 180));
+        }
+    }
+
+
+    public void calcTargetAngleSpeed() {
+        double x = disToAprilTag;
+        double shooterAngleSetting;
+        double shooterAngle;
+        if (tagFound) {
+            shooterAngle = 12.1+(0.544*x)-(0.00386*(x*x));
+            shooterAngleSetting = (shooterAngle-31.3)/(-12.3);
+            turretAnglePos = clamper(shooterAngleSetting, 0.0, 1.0);
+
+
+            if (disToAprilTag < targetSpeedLinearSplit) {
+                targetRPM = (disToAprilTag * -11.9) + 3366;
+            } else {
+                targetRPM = (disToAprilTag * 17.9) + 1997;
+            }
+        }
+
     }
 
     private void updateTurretAngle() {
