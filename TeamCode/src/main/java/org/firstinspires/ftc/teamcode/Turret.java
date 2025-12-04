@@ -14,14 +14,13 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 /**
- * Turret subsystem - non-blocking tracking, manual control works correctly.
- * Public API kept the same as before.
+
  */
 public final class Turret {
     public static class Params {
         public static final double PID_INTERVAL = 0.1;
 
-        public double kP = 0.0001;
+        public double kP = 0.001;
         public double kI = 0.0005;
         public double kD = 0.00001;
 
@@ -55,6 +54,8 @@ public final class Turret {
     public final double LimelightHeight = 11.75; //inches
 
     public final double LimelightAngle = 22.77; //degrees fron horizontal position
+
+    public final double targetSpeedLinearSplit = 46;
     public final DcMotor leftMotor;       // shooter left
     public final DcMotor rightMotor;      // shooter right
     public final FtcDashboard dashboard;
@@ -84,6 +85,8 @@ public final class Turret {
 
     // Turret tracking & control state
     public boolean trackingMode = false;   // whether limelight auto-tracks
+
+    public boolean tagFound = false;
     public double lastDirection = 1.0;    // last search direction when tag lost
 
     // Turret angle state (for Servo position)
@@ -178,11 +181,15 @@ public final class Turret {
     // Main update (call once per loop)
     // -------------------------
     public void update() {
+
+        updateTurretControl();
         // update shooter PID (non-blocking)
+        calcTargetAngleSpeed();
         pidUpdate();
         shotDetection();
         // update turret yaw (non-blocking; either tracking or manual)
-        updateTurretControl();
+
+        //updateTurretControl();
 
         // update turret angle servo (non-blocking)
         updateTurretAngle();
@@ -202,44 +209,59 @@ public final class Turret {
         double deltaTime = currentTime - lastTime;
         if (deltaTime <= 0.0) deltaTime = 1e-6;
 
-        // Left
+        // --- Left Motor ---
         int deltaTicksLeft = currentPositionL - lastPositionLeft;
         double revsPerSecLeft = (deltaTicksLeft / Params.TICKS_PER_REV) / deltaTime;
         currentRPMLeft = revsPerSecLeft * 60.0;
+
         double errorLeft = targetRPM - currentRPMLeft;
-        if (Math.abs(errorLeft) < PARAMS.toleranceRPM/2) {
-            errorLeft = 0;
+        double offsetLeft;
+        double offsetRight;
+        offsetLeft = (targetRPM + 47.6) / 5952.0;
+        double pidOutputLeft;
+        if (Math.abs(errorLeft) < PARAMS.toleranceRPM / 4) {
+
+            pidOutputLeft = offsetLeft;
+        } else {
+            integralLeft += errorLeft * deltaTime;
+            double derivativeLeft = (errorLeft - lastErrorLeft) / deltaTime;
+            pidOutputLeft = offsetLeft + (PARAMS.kP * errorLeft) + (PARAMS.kI * integralLeft) + (PARAMS.kD * derivativeLeft);
+            pidOutputLeft = clamper(pidOutputLeft, 0.0, 1.0);
         }
-        integralLeft += errorLeft * deltaTime;
-        double derivativeLeft = (errorLeft - lastErrorLeft) / deltaTime;
-        double pidOutputLeft = (PARAMS.kP * errorLeft) + (PARAMS.kI * integralLeft) + (PARAMS.kD * derivativeLeft);
-        pidOutputLeft = clamper(pidOutputLeft, 0.0, 1.0);
+
         lastErrorLeft = errorLeft;
         lastPositionLeft = currentPositionL;
 
-        // Right
+        // --- Right Motor ---
         int deltaTicksRight = currentPositionR - lastPositionRight;
         double revsPerSecRight = (deltaTicksRight / Params.TICKS_PER_REV) / deltaTime;
         currentRPMRight = revsPerSecRight * 60.0;
+
         double errorRight = targetRPM - currentRPMRight;
-        if (Math.abs(errorRight) < PARAMS.toleranceRPM/2) {
-            errorRight = 0;
+        offsetRight = (targetRPM + 47.6) / 5952.0;
+        double pidOutputRight;
+        if (Math.abs(errorRight) < PARAMS.toleranceRPM / 4) {
+            pidOutputRight = offsetRight;
             color(0.611);
         } else if (Math.abs(errorRight) < 150) {
+            integralRight += errorRight * deltaTime;
+            double derivativeRight = (errorRight - lastErrorRight) / deltaTime;
+            pidOutputRight = offsetRight + (PARAMS.kP * errorRight) + (PARAMS.kI * integralRight) + (PARAMS.kD * derivativeRight);
+            pidOutputRight = clamper(pidOutputRight, 0.0, 1.0);
             color(0.333);
         } else {
+            integralRight += errorRight * deltaTime;
+            double derivativeRight = (errorRight - lastErrorRight) / deltaTime;
+            pidOutputRight = offsetRight + (PARAMS.kP * errorRight) + (PARAMS.kI * integralRight) + (PARAMS.kD * derivativeRight);
+            pidOutputRight = clamper(pidOutputRight, 0.0, 1.0);
             color(0.27);
         }
-        integralRight += errorRight * deltaTime;
-        double derivativeRight = (errorRight - lastErrorRight) / deltaTime;
-        double pidOutputRight = (PARAMS.kP * errorRight) + (PARAMS.kI * integralRight) + (PARAMS.kD * derivativeRight);
-        pidOutputRight = clamper(pidOutputRight, 0.0, 1.0);
+
         lastErrorRight = errorRight;
         lastPositionRight = currentPositionR;
-
         lastTime = currentTime;
 
-        // Apply shooter motor power if shooting is enabled
+        // --- Apply Shooter Motor Power ---
         if (shootingEnabled) {
             leftMotor.setPower(pidOutputLeft);
             rightMotor.setPower(pidOutputRight);
@@ -254,6 +276,7 @@ public final class Turret {
             outputPowerRight = 0.0;
         }
     }
+
 
     public void shotDetection(){
 
@@ -274,21 +297,21 @@ public final class Turret {
             deltaRightRPM = currentRPMRight - lastRightRPM;
 
 
-            
+
             leftDerivative = deltaLeftRPM/deltaTime;
             rightDerivative = deltaRightRPM/deltaTime;
-            
-            
-            
+
+
+
             if (leftDerivative < -RPMDerivativeThreshold && rightDerivative < - RPMDerivativeThreshold) {
                 shotDetected = true;
                 lastShotTimer = timer.time();
             } else {
-                
+
                 if (timer.time() - lastShotTimer > 1 && shotDetected) {
                     shotDetected = false;
                 }
-                
+
             }
         }
         lastLeftRPM=currentRPMLeft;
@@ -299,7 +322,7 @@ public final class Turret {
     // Non-blocking turret yaw control: tracking or manual
     private void updateTurretControl() {
         double turretPower = 0.0;
-        boolean tagFound = false;
+        tagFound = false;
         double errorAngleDeg = 0.0;
 
         if (trackingMode) {
@@ -344,7 +367,29 @@ public final class Turret {
     }
 
     public void measureDis() {
-        disToAprilTag = (ATHeight - LimelightHeight) / Math.tan((ATAngle+LimelightAngle)*(Math.PI/180));
+        if (tagFound) {
+            disToAprilTag = (ATHeight - LimelightHeight) / Math.tan((ATAngle + LimelightAngle) * (Math.PI / 180));
+        }
+    }
+
+
+    public void calcTargetAngleSpeed() {
+        double x = disToAprilTag;
+        double shooterAngleSetting;
+        double shooterAngle;
+        if (tagFound) {
+            shooterAngle = 12.1+(0.544*x)-(0.00386*(x*x));
+            shooterAngleSetting = (shooterAngle-31.3)/(-12.3);
+            turretAnglePos = clamper(shooterAngleSetting, 0.0, 1.0);
+
+
+            if (disToAprilTag < targetSpeedLinearSplit) {
+                targetRPM = (disToAprilTag * -11.9) + 3366;
+            } else {
+                targetRPM = (disToAprilTag * 17.9) + 1997;
+            }
+        }
+
     }
 
     private void updateTurretAngle() {
