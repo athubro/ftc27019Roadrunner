@@ -21,8 +21,8 @@ public final class Turret {
     public static class Params {
         public static final double PID_INTERVAL = 0.1;
 
-        public double kP = 0.0001;
-        public double kI = 0.0005;
+        public double kP = 0.0005;
+        public double kI = 0.005;
         public double kD = 0.00001;
 
         public double toleranceRPM = 50.0;
@@ -31,8 +31,8 @@ public final class Turret {
 
         public static final int TARGET_TAG_ID = 20;
         public static final double TOLERANCE_DEG = 1.0;
-        public static final double BASE_TURRET_POWER = 0.15;
-        public static final double MIN_TURRET_POWER = 0.05;
+        public static final double BASE_TURRET_POWER = 0.2;
+        public static final double MIN_TURRET_POWER = 0.08;
         public static final double KP_TURRET = 0.02;
         public static final double SEARCH_POWER = 0.08;
         public static final long TRACK_SLEEP_MS = 20L;
@@ -83,6 +83,7 @@ public final class Turret {
     public double outputPowerRight = 0.0;
     public double currentRPMRight = 0.0;
 
+    public boolean shooterUpToSpeed = false;
 
     // Turret tracking & control state
     public boolean trackingMode = false;   // whether limelight auto-tracks
@@ -108,10 +109,12 @@ public final class Turret {
     public double shotDetectLastTime = 0;
     public boolean shotDetected = false;
 
-    public final double RPMDerivativeThreshold = 4000;
+    public final double RPMDerivativeThreshold = 3000;
     public double leftDerivative=0;
     public double rightDerivative=0;
+    private double speedCheckTimer =0;
 
+    public String[] motiff = {"N", "N", "N"};
     // Constructor
     public Turret(HardwareMap hardwareMap, Telemetry telemetry) {
         this.telemetry = telemetry;
@@ -184,6 +187,8 @@ public final class Turret {
     public void update() {
 
         updateTurretControl();
+
+      //  setShootingEnabled(tagFound);
         // update shooter PID (non-blocking)
         calcTargetAngleSpeed();
         pidUpdate();
@@ -199,7 +204,7 @@ public final class Turret {
         sendTelemetry();
         // no sleeps here — caller loop remains responsive
     }
-
+    /*
     private void pidUpdate() {
         if (pidTimer.seconds() < Params.PID_INTERVAL) return;
         pidTimer.reset();
@@ -262,7 +267,102 @@ public final class Turret {
             outputPowerRight = 0.0;
         }
     }
+    */
+    private void pidUpdate() {
+        if (pidTimer.seconds() < Params.PID_INTERVAL) return;
+        pidTimer.reset();
 
+        int currentPositionL = leftMotor.getCurrentPosition();
+        int currentPositionR = rightMotor.getCurrentPosition();
+        double currentTime = timer.seconds();
+        double deltaTime = currentTime - lastTime;
+        if (deltaTime <= 0.0) deltaTime = 1e-6;
+
+        // --- Left Motor ---
+        int deltaTicksLeft = currentPositionL - lastPositionLeft;
+        double revsPerSecLeft = (deltaTicksLeft / Params.TICKS_PER_REV) / deltaTime;
+        currentRPMLeft = revsPerSecLeft * 60.0;
+
+        double errorLeft = targetRPM - currentRPMLeft;
+        double offsetLeft;
+        double offsetRight;
+        offsetLeft = (targetRPM + 47.6) / 5952.0;
+        double pidOutputLeft;
+        pidOutputLeft = offsetLeft;
+
+        if (Math.abs(errorLeft) < PARAMS.toleranceRPM ) {
+            //if (shooterUpToSpeed) integralLeft=0;
+
+            //pidOutputLeft = offsetLeft;
+        } else {
+            integralLeft += errorLeft * deltaTime;
+            double derivativeLeft = (errorLeft - lastErrorLeft) / deltaTime;
+            pidOutputLeft = offsetLeft + (PARAMS.kP * errorLeft) + (PARAMS.kI * integralLeft) + (PARAMS.kD * derivativeLeft);
+            pidOutputLeft = clamper(pidOutputLeft, 0.0, 1.0);
+        }
+
+        lastErrorLeft = errorLeft;
+        lastPositionLeft = currentPositionL;
+
+        // --- Right Motor ---
+        int deltaTicksRight = currentPositionR - lastPositionRight;
+        double revsPerSecRight = (deltaTicksRight / Params.TICKS_PER_REV) / deltaTime;
+        currentRPMRight = revsPerSecRight * 60.0;
+
+        double errorRight = targetRPM - currentRPMRight;
+        offsetRight = (targetRPM + 47.6) / 5952.0;
+        double pidOutputRight;
+        pidOutputRight = offsetRight;
+        if (Math.abs(errorRight) < PARAMS.toleranceRPM ) {
+            //if (shooterUpToSpeed) integralRight=0;
+            //pidOutputRight = offsetRight;
+           // color(0.611);
+
+        } else if (Math.abs(errorRight) < 150) {
+            integralRight += errorRight * deltaTime;
+            double derivativeRight = (errorRight - lastErrorRight) / deltaTime;
+            pidOutputRight = offsetRight + (PARAMS.kP * errorRight) + (PARAMS.kI * integralRight) + (PARAMS.kD * derivativeRight);
+            pidOutputRight = clamper(pidOutputRight, 0.0, 1.0);
+            color(0.333);
+
+        } else {
+            integralRight += errorRight * deltaTime;
+            double derivativeRight = (errorRight - lastErrorRight) / deltaTime;
+            pidOutputRight = offsetRight + (PARAMS.kP * errorRight) + (PARAMS.kI * integralRight) + (PARAMS.kD * derivativeRight);
+            pidOutputRight = clamper(pidOutputRight, 0.0, 1.0);
+            color(0.27);
+
+        }
+        if (Math.abs(errorRight) < PARAMS.toleranceRPM*1.5 && Math.abs(errorLeft) < PARAMS.toleranceRPM*1.5){
+            if (timer.seconds()-speedCheckTimer>0.1){
+                shooterUpToSpeed=true;
+                color(0.611);
+            }
+        } else {
+            speedCheckTimer=timer.seconds();
+            shooterUpToSpeed=false;
+        }
+        lastErrorRight = errorRight;
+        lastPositionRight = currentPositionR;
+        lastTime = currentTime;
+
+        // --- Apply Shooter Motor Power ---
+        if (shootingEnabled) {
+            leftMotor.setPower(pidOutputLeft);
+            rightMotor.setPower(pidOutputRight);
+            outputPowerLeft = pidOutputLeft;
+            outputPowerRight = pidOutputRight;
+            //outputPowerLeft = offsetLeft;
+            //outputPowerRight = offsetRight;
+        } else {
+            leftMotor.setPower(0.0);
+            rightMotor.setPower(0.0);
+            integralLeft = 0.0;
+            integralRight = 0.0;
+            outputPowerLeft = 0.0;
+            outputPowerRight = 0.0;
+        }
+    }
     public void shotDetection(){
 
         double deltaTime = 0;
@@ -291,6 +391,8 @@ public final class Turret {
             if (leftDerivative < -RPMDerivativeThreshold && rightDerivative < - RPMDerivativeThreshold) {
                 shotDetected = true;
                 lastShotTimer = timer.time();
+                integralLeft=0;
+                integralRight=0;
             } else {
 
                 if (timer.time() - lastShotTimer > 1 && shotDetected) {
@@ -320,6 +422,7 @@ public final class Turret {
                         errorAngleDeg = fid.getTargetXDegrees() - targetAngle;
                         ATAngle = fid.getTargetYDegrees();
                         measureDis();
+
                         break;
                     }
                 }
@@ -363,15 +466,20 @@ public final class Turret {
         double shooterAngleSetting;
         double shooterAngle;
         if (tagFound) {
-            shooterAngle = 12.1+(0.544*x)-(0.00386*(x*x));
-            shooterAngleSetting = (shooterAngle-31.3)/(-12.3);
+            if (x<82) {
+                shooterAngle = 12.1 + (0.544 * x) - (0.00386 * (x * x));
+                shooterAngleSetting = (shooterAngle-31.3)/(-12.3);
+            } else{
+                shooterAngleSetting =0;
+            }
+
             turretAnglePos = clamper(shooterAngleSetting, 0.0, 1.0);
 
 
             if (disToAprilTag < targetSpeedLinearSplit) {
                 targetRPM = (disToAprilTag * -11.9) + 3366;
             } else {
-                targetRPM = (disToAprilTag * 17.9) + 1997;
+                targetRPM = (disToAprilTag * 17.9) + 1950; //change from 1997 to 1950
             }
         }
 

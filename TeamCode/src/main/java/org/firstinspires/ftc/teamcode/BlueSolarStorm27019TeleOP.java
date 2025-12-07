@@ -6,8 +6,8 @@ import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-@TeleOp(name = "Turret + Mecanum + Kickers", group = "TeleOp")
-public class SolarStorm27019TeleOP extends LinearOpMode {
+@TeleOp(name = "Blue TeleOp", group = "TeleOp")
+public class BlueSolarStorm27019TeleOP extends LinearOpMode {
 
     private Turret turretSystem;
     private MecanumDrive drive;

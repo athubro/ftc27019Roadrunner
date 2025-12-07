@@ -11,12 +11,13 @@ import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import java.util.Arrays;
 
 public class Storage {
     public static class Params {
         public static double backDisCheck = 7;
         public static double frontDisCheck = 3.55; //3.7--->3.4
-        public static double middleDisCheck = 5;
+        public static double middleDisCheck = 4.5;//change from 5 to 4.5
         public static double backGreenRatio = 3.0;
         public static double middleGreenRatio = 2.7;
         public static double frontGreenRatio = 3.75;
@@ -82,9 +83,9 @@ public class Storage {
     }
 
     private static double midPos = 0.6;
-    private static int shortDelay = 40; //ms
+    private static int shortDelay = 30; //ms
     private static int longDelay =1000; //ms
-    private static double gateMidPOs =0.6;
+    private static double gateMidPOs =0.5;
 
     private static int gateDelay = 500; //ms
 
@@ -99,18 +100,23 @@ public class Storage {
     public double greenReading3 = 0;
     public double blueReading3=0;
 
+    private boolean flagLoadingMiddle = false;
+    private boolean flagLoadingBack=false;
+    private boolean flagLoadingFront = false;
+
+
     public static Storage.Params PARAMS = new Storage.Params();
     private Servo frontKick, middleKick, backKick, gate;
     private CRServo transferServo;
 
     public Servo rgbIndicator;
-
+    private Turret myTurret;
 
     private ColorSensor frontColorSensor, middleColorSensor, backColorSensor;
     private DistanceSensor frontDisSensor, middleDisSensor, backDisSensor;
     private NormalizedRGBA normalizedColors;
     private DcMotor activeIntake;
-    boolean flag = true;
+    boolean flag = true; //loader is available to load balls, when it is true;
 
     public int count;
 
@@ -124,11 +130,16 @@ public class Storage {
     public double middlePos = 0;
     public double backPos = 0;
 
-public double dis =0;
+    public double dis =0;
 
     public boolean kickUp = false;
 
     private ElapsedTime timer = new ElapsedTime();
+    private ElapsedTime sleepTimer = new ElapsedTime();
+    private ElapsedTime generalTimer = new ElapsedTime();
+    private double waitForLoaderResetTimer =0;
+    private final double resetDelay =0.5; //seconds to wait after reset the kicker;
+    private boolean resetting=false;
     public String[] ballArray = {"N", "N", "N"};
     public String frontBall = "N";
     public String middleBall = "N";
@@ -174,7 +185,10 @@ public double dis =0;
     private void kickBack1()   { gate.setPosition(gateMidPOs); sleep(gateDelay); kickBack(); sleep(shortDelay); kickMiddle(); sleep(shortDelay); kickFront(); }
     private void kickBack1_2Step()   { gate.setPosition(gateMidPOs); sleep(gateDelay); backKick.setPosition(midPos); sleep(shortDelay); middleKick.setPosition(midPos); sleep(shortDelay); frontKick.setPosition(midPos);    sleep(longDelay); kickBack(); sleep(shortDelay); kickMiddle(); sleep(shortDelay); kickFront(); }
 
-    public Storage(HardwareMap hardwareMap) {
+
+    public Storage(HardwareMap hardwareMap, Turret turret) {
+
+        myTurret=turret;
         frontKick = hardwareMap.get(Servo.class, "frontKick");
         middleKick = hardwareMap.get(Servo.class, "middleKick");
         backKick = hardwareMap.get(Servo.class, "backKick");
@@ -222,22 +236,19 @@ public double dis =0;
         frontPos = frontKick.getPosition();
         middlePos = middleKick.getPosition();
         backPos = backKick.getPosition();
+
         if (!flag) {
-            if (kickTarget.equals("front")) {
-                if (pastTime(timeCap)) {
-                    resetKick();
-                }
-            } else if (kickTarget.equals("middle")) {
-                if (pastTime(timeCap)) {
-                    resetKick();
-                }
-            } else if (kickTarget.equals("back")) {
-                if (pastTime(timeCap)) {
-                     resetKick();
-                }
+            if (pastTime(timeCap)) {
+                resetKick();
             }
+
         }
 
+    }
+
+    public void loadingUpdate() {
+        autoLoad();
+        resetAfterLoad();
     }
 
 public void color (double rgb) {
@@ -273,8 +284,24 @@ public void color (double rgb) {
         return ball;
 
     }
-
-
+    public void resetAfterLoad(){
+        if (myTurret.shotDetected && kickUp){
+            resetKickers();
+            myTurret.setShootingEnabled(false);
+            waitForLoaderResetTimer=generalTimer.seconds();
+        }
+        if (resetting&&(generalTimer.seconds()-waitForLoaderResetTimer>resetDelay)){
+            flag=true;
+            resetting=false;
+        }
+    }
+    public void shotDetectReset() {
+        if (kickUp && myTurret.shotDetected) {
+            resetKick();
+            myTurret.setShootingEnabled(false);
+            myTurret.shotDetected = false;
+        }
+    }
     public boolean isKickUp (String target) {
         double floor = 0.9;
         if (target.equals("front")) {
@@ -421,8 +448,10 @@ public void color (double rgb) {
     public void kickFront() { kickUp = true; frontKick.setPosition(1); }
     public void kickMiddle() {  kickUp = true;middleKick.setPosition(1); }
     public void kickBack() {  kickUp = true;backKick.setPosition(1); }
-    public void resetKick() {kickUp = false; backKick.setPosition(0); sleep(67); middleKick.setPosition(0); sleep(67); frontKick.setPosition(0); gate.setPosition(1); flag = true; }
-    private void sleep(int ms) { timer.reset(); while(timer.milliseconds() < ms) {} }
+    public void resetKick() {kickUp = false; backKick.setPosition(0); sleep(67); middleKick.setPosition(0); sleep(67); frontKick.setPosition(0); gate.setPosition(1); sleep(500); flag = true; }
+    public void resetKickers() {resetting = true; backKick.setPosition(0); sleep(30); middleKick.setPosition(0); sleep(30); frontKick.setPosition(0); gate.setPosition(1); } // new reset function, created by FX
+
+    private void sleep(int ms) { sleepTimer.reset(); while(sleepTimer.milliseconds() < ms) {} }
     double currentTime = 0;
     private void timeReset() {timer.reset();}
 
@@ -435,7 +464,121 @@ public void color (double rgb) {
     // Automated loading for purple ball
     public void loadPurple() { loadBall("P"); }
 
-    private void loadBall(String targetColor) { // "G" or "P"
+    public void loadBack(){
+        if (flag){
+            update();
+            String f = ballArray[0]; // front
+            String m = ballArray[1]; // middle
+            String b = ballArray[2]; // back
+            if (!b.equals("N")){
+                flag =false;
+                if (count == 0) {
+                    kickTarget ="back";
+                    timeReset();
+                    kickBack3();
+
+                } else if (count == 1) {
+                    if (m.equals("N")) {
+                        kickTarget ="back";
+                        timeReset();
+                        kickBack2Front();    // front + back
+                    }
+                    else {
+                        timeReset();
+                        kickTarget ="back";
+                        kickBack2Middle();  // front + middle
+                    }
+                } else if (count == 2) {
+                    kickTarget ="back";
+                    timeReset();
+                    kickBack1();
+
+                }
+            } else{
+                flag=true;
+            }
+
+        }
+    }
+
+    public void loadMiddle(){
+        if (flag){
+            update();
+            String f = ballArray[0]; // front
+            String m = ballArray[1]; // middle
+            String b = ballArray[2]; // back
+            if (!m.equals("N")){
+                flag =false;
+                if (count == 0) {
+                    kickTarget ="middle";
+                    timeReset();
+                    kickMiddle3();
+                } else if (count == 1) {
+                    if (f.equals("N")) {
+                        kickTarget ="middle";
+                        timeReset();
+                        kickMiddle2Back();   // middle + back
+
+                    }
+                    else {
+                        kickTarget ="middle";
+                        timeReset();
+                        kickMiddle2Front();
+                    }     //middle + front
+                } else if (count == 2) {
+                    kickTarget ="middle";
+                    timeReset();
+                    kickMiddle1();
+
+                }
+            } else{
+                flag=true;
+            }
+
+        }
+    }
+
+    public void loadFront(){
+        if (flag){
+            update();
+            String f = ballArray[0]; // front
+            String m = ballArray[1]; // middle
+            String b = ballArray[2]; // back
+            if (!f.equals("N")){
+                flag =false;
+                if (count == 0) {
+                    kickTarget ="front";
+                    timeReset();
+                    kickFront3();
+
+                } else if (count == 1) {
+                    if (b.equals("N")) {
+                        kickTarget ="front";
+                        timeReset();
+                        kickFront2Middle();   // back + middle
+
+                    }
+                    else {
+                        kickTarget ="front";
+                        timeReset();
+                        kickFront2Back();    // back + front
+
+                    }
+                } else if (count == 2) {
+                    kickTarget ="front";
+                    timeReset();
+                    kickFront1();
+
+                }
+            } else{
+                flag=true;
+            }
+
+        }
+    }
+
+
+    private void loadBall(String targetColor) { // "G" or "P" //changed to middle first, then back, front last.
        if (flag) {
            update(); // Refresh sensor data
 
@@ -451,31 +594,7 @@ public void color (double rgb) {
                 color(0.5);
             }
            // Find the FIRST (closest to intake) ball that matches the target color
-           if (b.equals(targetColor)) {
-               // Target ball is in FRONT
-               if (count == 0) {
-                   kickTarget ="back";
-                   timeReset();
-                   kickBack3();
-
-               } else if (count == 1) {
-                   if (m.equals("N")) {
-                       kickTarget ="back";
-                       timeReset();
-                       kickBack2Front();    // front + back
-                   }
-                   else {
-                       timeReset();
-                       kickTarget ="back";
-                       kickBack2Middle();  // front + middle
-                   }
-               } else if (count == 2) {
-                   kickTarget ="back";
-                   timeReset();
-                   kickBack1();
-
-               }
-           } else if (m.equals(targetColor)) {
+           if (m.equals(targetColor)) {
                // Target ball is in MIDDLE
                if (count == 0) {
                    kickTarget ="middle";
@@ -499,8 +618,35 @@ public void color (double rgb) {
                    kickMiddle1();
 
                }
-           } else if (f.equals(targetColor)) {
+
+
+           } else if (b.equals(targetColor)) {
                // Target ball is in BACK
+
+               if (count == 0) {
+                   kickTarget ="back";
+                   timeReset();
+                   kickBack3();
+
+               } else if (count == 1) {
+                   if (m.equals("N")) {
+                       kickTarget ="back";
+                       timeReset();
+                       kickBack2Front();    // front + back
+                   }
+                   else {
+                       timeReset();
+                       kickTarget ="back";
+                       kickBack2Middle();  // front + middle
+                   }
+               } else if (count == 2) {
+                   kickTarget ="back";
+                   timeReset();
+                   kickBack1();
+
+               }
+           } else if (f.equals(targetColor)) {
+               // Target ball is in FRONT
                if (count == 0) {
                    kickTarget ="front";
                    timeReset();
@@ -643,17 +789,82 @@ public void color (double rgb) {
                 }
             }
         }
+
+
+
+
+
         // If no matching ball found → do nothing
 
         // Always reset kickers and refresh state
         //update();
     }
+
+    public void autoLoad(){
+        boolean turretReady = myTurret.tagFound;
+        if (turretReady&& flag && myTurret.shooterUpToSpeed){
+            if (flagLoadingBack){
+                loadBack();
+                flagLoadingBack=false;
+            } else {
+                if (flagLoadingMiddle){
+                    loadMiddle();
+                    flagLoadingMiddle=false;
+                } else{
+                    if (flagLoadingFront){
+                        loadFront();
+                        flagLoadingFront=false;
+                    }
+                }
+            }
+        }
+    }
+    public  void loadAll(){
+        flagLoadingBack=true;
+        flagLoadingMiddle=true;
+        flagLoadingFront=true;
+    }
+    public void rapidFire() {
+        boolean stat=false;
+        boolean stat2=false;
+        loadBack();
+        stat=waitForReset();
+        if (stat){
+            loadMiddle();
+            stat2=waitForReset();
+            if (stat2){
+                loadFront();
+            }
+        }
+
+
+    }
+
+    public boolean waitForReset() {
+        double startTime = generalTimer.time();
+        boolean timeOut = false;
+
+        while (!timeOut && !flag && !myTurret.shotDetected) {
+            update();
+            myTurret.update();
+            if (generalTimer.time() - startTime > 3) {
+                timeOut=true;
+            }
+        }
+        shotDetectReset();
+        sleep(400);
+
+        return (!timeOut);
+    }
+
+
     // Count balls in storage
     public int ballCount() {
         int count = 0;
         if (!frontBall.equals("N")) count++;
         if (!middleBall.equals("N")) count++;
         if (!backBall.equals("N")) count++;
+
         return count;
     }
 }
