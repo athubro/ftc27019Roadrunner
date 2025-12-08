@@ -11,20 +11,22 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
 
     private Turret turretSystem;
     private MecanumDrive drive;
-    private Storage kickers;  // intake-free storage class
+    //private Storage kickers;  // intake-free storage class
+    private StorageWLoader kickers;
     private Pose2d pose = new Pose2d(0, 0, 0);
     private boolean waitingForConfig = true;
-    private double speedRatio = 0.3;
+    private double speedRatio = 0.4;
     @Override
     public void runOpMode() {
 
         // Initialize all systems
         turretSystem = new Turret(hardwareMap, telemetry);
         drive = new MecanumDrive(hardwareMap, pose);
-        drive.PARAMS.maxWheelVel=30;
+        //drive.PARAMS.maxWheelVel=30;
 
-        kickers = new Storage(hardwareMap, turretSystem);  // intake-free kicker class
-        while (waitingForConfig){
+        //kickers = new Storage(hardwareMap, turretSystem);  // intake-free kicker class
+        kickers = new StorageWLoader(hardwareMap, turretSystem);
+       /* while (waitingForConfig){speedRatio
             telemetry.addLine("DO NOT hit START for NOW!!!");
             telemetry.addLine("Turret + Drive + Kickers Ready");
             telemetry.addLine("Press pad-1 X to increase the speed ratio by 0.05");
@@ -32,12 +34,14 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             telemetry.addLine("Press pad-1 A when finish!");
             telemetry.addData("Speed Ratio", speedRatio);
             telemetry.update();
-            if (gamepad1.xWasReleased()) {speedRatio+=0.05;}
+            if (gamepad1.xWasReleased()) {+=0.05;}
             if (gamepad1.yWasReleased()) {speedRatio-=0.05;}
             if (gamepad1.aWasReleased()) {waitingForConfig=false;}
         }
         telemetry.addLine("Now you can start!");
         telemetry.update();
+
+        */
         waitForStart();
 
         // Button state trackers for toggles
@@ -114,7 +118,9 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             if (gamepad2.dpad_down) kickers.kickFront();
 
             // Optional telemetry for debugging
-            telemetry.addData("timer", kickers.timeRN);
+            telemetry.addData("timer", kickers.generalTimer);
+            telemetry.addData("change flag trigger value", kickers.changeFlagTrigger);
+            telemetry.addData("flag", kickers.flag);
             //telemetry.addData("RPM", turretSystem.getTargetRPM());
 
 

@@ -1,19 +1,18 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.hardware.ColorSensor;
-import com.qualcomm.robotcore.hardware.DistanceSensor;
-import com.qualcomm.robotcore.hardware.Gamepad;
-import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DistanceSensor;
+import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
-import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import java.util.Arrays;
 
-public class Storage {
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+
+public class StorageWLoader {
     public static class Params {
         public static double backDisCheck = 7;
         public static double frontDisCheck = 3.55; //3.7--->3.4
@@ -83,11 +82,11 @@ public class Storage {
     }
 
     private static double midPos = 0.6;
-    private static int shortDelay = 30; //ms
-    private static int longDelay =1000; //ms
-    private static double gateMidPOs =0.5;
+    private static double shortDelay = 0.03; //s
+    private static double longDelay =1; //s
+    private static double gateMidPOs =0.6;
 
-    private static int gateDelay = 500; //ms
+    private static double gateDelay = 0.5 ; //s
 
     public boolean kick2StepFlag=false  ;
     public double redReading1 = 0;
@@ -105,7 +104,7 @@ public class Storage {
     private boolean flagLoadingFront = false;
 
 
-    public static Storage.Params PARAMS = new Storage.Params();
+    public static StorageWLoader.Params PARAMS = new StorageWLoader.Params();
     private Servo frontKick, middleKick, backKick, gate;
     private CRServo transferServo;
 
@@ -133,10 +132,20 @@ public class Storage {
     public double dis =0;
 
     public boolean kickUp = false;
+    private double gateNextTrigger = -1;
+    private double gateNextPos=0;
+    private double frontLoaderNextTrigger = -1;
+    private double frontLoaderNextPos=0;
+    private double midLoaderNextTrigger=-1;
+    private double midLoaderNextPos=0;
+    private double backLoaderNextTrigger=-1;
+    private double backLoaderNextPos=0;
 
+    public double changeFlagTrigger=-1;
+    private boolean nextFlagValue=true;
     private ElapsedTime timer = new ElapsedTime();
     private ElapsedTime sleepTimer = new ElapsedTime();
-    private ElapsedTime generalTimer = new ElapsedTime();
+    public ElapsedTime generalTimer = new ElapsedTime();
     private double waitForLoaderResetTimer =0;
     private final double resetDelay =0.5; //seconds to wait after reset the kicker;
     private boolean resetting=false;
@@ -145,48 +154,157 @@ public class Storage {
     public String middleBall = "N";
     public String backBall = "N";
     // 3-ball cases (only move the kicker at the target ball)
-    private void kickFront3()  { gate.setPosition(1); sleep(gateDelay);   kickFront();  }
-    private void kickFront3w2Step()  { gate.setPosition(1); sleep(gateDelay);frontKick.setPosition(midPos); sleep(longDelay);        kickFront();  }
+    private void kickFront3()  {
+        double t=generalTimer.seconds();
+        gateNextPos=1;
+        gateNextTrigger= t;
+        frontLoaderNextTrigger=t+gateDelay;
+        kickFront();
+    }
 
-    private void kickMiddle3() {gate.setPosition(gateMidPOs); sleep(gateDelay); kickMiddle(); }
-    private void kickMiddle3w2Step() {gate.setPosition(gateMidPOs); sleep(gateDelay); middleKick.setPosition(midPos);  sleep(longDelay);         kickMiddle(); }
+    private void kickFront3w2Step() {kickFront3();}
+    //private void kickFront3w2Step()  { gate.setPosition(1); sleep(gateDelay);frontKick.setPosition(midPos); sleep(longDelay);        kickFront();  }
 
-    private void kickBack3()   {gate.setPosition(gateMidPOs); sleep(gateDelay); kickBack(); }
+    private void kickMiddle3() {
+        double t=generalTimer.seconds();
+        gateNextPos=gateMidPOs;
+        gateNextTrigger= t;
+        midLoaderNextTrigger=t+gateDelay;
+        kickMiddle();
+    }
 
-    private void kickBack3w2Step ()   {gate.setPosition(gateMidPOs); sleep(gateDelay); backKick.setPosition(midPos); sleep(longDelay); kickBack(); }
+    private void kickMiddle3w2Step(){kickMiddle3();}
+    //private void kickMiddle3w2Step() {gate.setPosition(gateMidPOs); sleep(gateDelay); middleKick.setPosition(midPos);  sleep(longDelay);         kickMiddle(); }
+
+    private void kickBack3()   {
+        double t=generalTimer.seconds();
+        gateNextPos=gateMidPOs;
+        gateNextTrigger= t;
+        backLoaderNextTrigger=t+gateDelay;
+        kickBack();
+    }
+
+    private void kickBack3w2Step (){kickBack3();}
+    //private void kickBack3w2Step ()   {gate.setPosition(gateMidPOs); sleep(gateDelay); backKick.setPosition(midPos); sleep(longDelay); kickBack(); }
 
     // 2-ball targeted kicks
-    private void kickBack2Front()   { gate.setPosition(gateMidPOs); sleep(gateDelay);  kickBack(); sleep(shortDelay); kickMiddle();}
+    private void kickBack2Front()   {
+        double t=generalTimer.seconds();
+        gateNextPos=gateMidPOs;
+        gateNextTrigger= t;
+        backLoaderNextTrigger=t+gateDelay;
+        kickBack();
+        midLoaderNextTrigger=t+gateDelay+shortDelay;
+        kickMiddle();
 
-    private void kickBack2Front_2Step()   { gate.setPosition(gateMidPOs); sleep(gateDelay); backKick.setPosition(midPos); sleep(shortDelay); middleKick.setPosition(midPos);   sleep(longDelay);kickBack(); sleep(shortDelay); kickMiddle();}
-    private void kickBack2Middle()  {gate.setPosition(gateMidPOs); sleep(gateDelay);   kickBack(); sleep(shortDelay); kickFront();}
+    }
 
-    private void kickBack2Middle_2Step()  {gate.setPosition(gateMidPOs); sleep(gateDelay); backKick.setPosition(midPos); sleep(shortDelay); frontKick.setPosition(midPos);      sleep(longDelay); kickBack(); sleep(shortDelay); kickFront();}
-    private void kickMiddle2Front() { gate.setPosition(gateMidPOs); sleep(gateDelay);  kickMiddle(); sleep(shortDelay); kickBack();}
+    private void kickBack2Front_2Step() {kickBack2Front();}
+    //private void kickBack2Front_2Step()   { gate.setPosition(gateMidPOs); sleep(gateDelay); backKick.setPosition(midPos); sleep(shortDelay); middleKick.setPosition(midPos);   sleep(longDelay);kickBack(); sleep(shortDelay); kickMiddle();}
+    private void kickBack2Middle()  {
+        double t=generalTimer.seconds();
+        gateNextPos=gateMidPOs;
+        gateNextTrigger= t;
+        backLoaderNextTrigger=t+gateDelay;
+        kickBack();
+        frontLoaderNextTrigger=t+gateDelay+shortDelay;
+        kickFront();
+    }
 
-    private void kickMiddle2Front_2Step() { gate.setPosition(gateMidPOs); sleep(gateDelay); middleKick.setPosition(midPos); sleep(shortDelay); backKick.setPosition(midPos);    sleep(longDelay); kickMiddle(); sleep(shortDelay); kickBack();}
-    private void kickMiddle2Back()  { gate.setPosition(gateMidPOs); sleep(gateDelay);  kickMiddle(); sleep(shortDelay); kickFront();}
+    private void kickBack2Middle_2Step(){ kickBack2Middle() ;}
+    //private void kickBack2Middle_2Step()  {gate.setPosition(gateMidPOs); sleep(gateDelay); backKick.setPosition(midPos); sleep(shortDelay); frontKick.setPosition(midPos);      sleep(longDelay); kickBack(); sleep(shortDelay); kickFront();}
+    private void kickMiddle2Front() {
+        double t=generalTimer.seconds();
+        gateNextPos=gateMidPOs;
+        gateNextTrigger= t;
+        midLoaderNextTrigger=t+gateDelay;
+        kickMiddle();
+        backLoaderNextTrigger=t+gateDelay+shortDelay;
+        kickBack();
+    }
 
-    private void kickMiddle2Back_2Step()  { gate.setPosition(gateMidPOs); sleep(gateDelay); middleKick.setPosition(midPos); sleep(shortDelay); frontKick.setPosition(midPos);    sleep(longDelay); kickMiddle(); sleep(shortDelay); kickFront();}
-    private void kickFront2Back()   { gate.setPosition(1); sleep(gateDelay); kickFront(); sleep(shortDelay); kickMiddle();}
+    private void kickMiddle2Front_2Step(){kickMiddle2Front();}
+    //private void kickMiddle2Front_2Step() { gate.setPosition(gateMidPOs); sleep(gateDelay); middleKick.setPosition(midPos); sleep(shortDelay); backKick.setPosition(midPos);    sleep(longDelay); kickMiddle(); sleep(shortDelay); kickBack();}
+    private void kickMiddle2Back()  {
+        double t=generalTimer.seconds();
+        gateNextPos=gateMidPOs;
+        gateNextTrigger= t;
+        midLoaderNextTrigger=t+gateDelay;
+        kickMiddle();
+        frontLoaderNextTrigger=t+gateDelay+shortDelay;
+        kickFront();
+    }
 
-    private void kickFront2Back_2Step()   { gate.setPosition(1); sleep(gateDelay); frontKick.setPosition(midPos); sleep(shortDelay); middleKick.setPosition(midPos);   sleep(longDelay); kickFront(); sleep(shortDelay); kickMiddle();}
-    private void kickFront2Middle() { gate.setPosition(1); sleep(gateDelay); kickFront(); sleep(shortDelay); kickBack();}
-
-    private void kickFront2Middle_2Step() { gate.setPosition(1); sleep(gateDelay);frontKick.setPosition(midPos); sleep(shortDelay); backKick.setPosition(midPos);       sleep(longDelay);kickFront(); sleep(shortDelay); kickBack();}
+    private void kickMiddle2Back_2Step(){kickMiddle2Back();}
+    //private void kickMiddle2Back_2Step()  { gate.setPosition(gateMidPOs); sleep(gateDelay); middleKick.setPosition(midPos); sleep(shortDelay); frontKick.setPosition(midPos);    sleep(longDelay); kickMiddle(); sleep(shortDelay); kickFront();}
+    private void kickFront2Back()   {
+        double t=generalTimer.seconds();
+        gateNextPos=1;
+        gateNextTrigger= t;
+        frontLoaderNextTrigger=t+gateDelay;
+        kickFront();
+        midLoaderNextTrigger=t+gateDelay+shortDelay;
+        kickMiddle();
+    }
+    private void kickFront2Back_2Step(){kickFront2Back();}
+    //private void kickFront2Back_2Step()   { gate.setPosition(1); sleep(gateDelay); frontKick.setPosition(midPos); sleep(shortDelay); middleKick.setPosition(midPos);   sleep(longDelay); kickFront(); sleep(shortDelay); kickMiddle();}
+    private void kickFront2Middle() {
+        double t=generalTimer.seconds();
+        gateNextPos=1;
+        gateNextTrigger= t;
+        frontLoaderNextTrigger=t+gateDelay;
+        kickFront();
+        backLoaderNextTrigger=t+gateDelay+shortDelay;
+        kickBack();
+    }
+    private void kickFront2Middle_2Step(){kickFront2Middle() ;}
+    //private void kickFront2Middle_2Step() { gate.setPosition(1); sleep(gateDelay);frontKick.setPosition(midPos); sleep(shortDelay); backKick.setPosition(midPos);       sleep(longDelay);kickFront(); sleep(shortDelay); kickBack();}
 
     // 1-ball cases (have to actuate all downstream kickers)
-    private void kickFront1()  {gate.setPosition(1); sleep(gateDelay);   kickFront(); sleep(shortDelay); kickMiddle(); sleep(shortDelay); kickBack();  }
+    private void kickFront1()  {
+        double t=generalTimer.seconds();
+        gateNextPos=1;
+        gateNextTrigger= t;
+        frontLoaderNextTrigger=t+gateDelay;
+        kickFront();
+        midLoaderNextTrigger=t+gateDelay+shortDelay;
+        kickMiddle();
+        backLoaderNextTrigger=t+gateDelay+2*shortDelay;
+        kickBack();
 
-    private void kickFront1_2Step()  {gate.setPosition(1); sleep(gateDelay);  frontKick.setPosition(midPos); sleep(shortDelay); backKick.setPosition(midPos); sleep(shortDelay); middleKick.setPosition(midPos);    sleep(longDelay);  kickFront(); sleep(shortDelay); kickMiddle(); sleep(shortDelay); kickBack();  }
-    private void kickMiddle1() { gate.setPosition(gateMidPOs); sleep(gateDelay);   kickMiddle(); sleep(shortDelay); kickBack(); sleep(shortDelay); kickFront();}
+    }
+    private void kickFront1_2Step(){kickFront1();}
+    //private void kickFront1_2Step()  {gate.setPosition(1); sleep(gateDelay);  frontKick.setPosition(midPos); sleep(shortDelay); backKick.setPosition(midPos); sleep(shortDelay); middleKick.setPosition(midPos);    sleep(longDelay);  kickFront(); sleep(shortDelay); kickMiddle(); sleep(shortDelay); kickBack();  }
+    private void kickMiddle1() {
+        double t=generalTimer.seconds();
+        gateNextPos=gateMidPOs;
+        gateNextTrigger= t;
+        midLoaderNextTrigger=t+gateDelay;
+        kickMiddle();
+        backLoaderNextTrigger=t+gateDelay+shortDelay;
+        kickBack();
+        frontLoaderNextTrigger=t+gateDelay+2*shortDelay;
+        kickFront();
+    }
 
-    private void kickMiddle1_2Step() { gate.setPosition(gateMidPOs); sleep(gateDelay);  middleKick.setPosition(midPos); sleep(shortDelay); backKick.setPosition(midPos); sleep(shortDelay); frontKick.setPosition(midPos);   sleep(longDelay);  kickMiddle(); sleep(shortDelay);kickBack(); sleep(shortDelay); kickFront();}
-    private void kickBack1()   { gate.setPosition(gateMidPOs); sleep(gateDelay); kickBack(); sleep(shortDelay); kickMiddle(); sleep(shortDelay); kickFront(); }
-    private void kickBack1_2Step()   { gate.setPosition(gateMidPOs); sleep(gateDelay); backKick.setPosition(midPos); sleep(shortDelay); middleKick.setPosition(midPos); sleep(shortDelay); frontKick.setPosition(midPos);    sleep(longDelay); kickBack(); sleep(shortDelay); kickMiddle(); sleep(shortDelay); kickFront(); }
+    private void kickMiddle1_2Step(){kickMiddle1();}
+    //private void kickMiddle1_2Step() { gate.setPosition(gateMidPOs); sleep(gateDelay);  middleKick.setPosition(midPos); sleep(shortDelay); backKick.setPosition(midPos); sleep(shortDelay); frontKick.setPosition(midPos);   sleep(longDelay);  kickMiddle(); sleep(shortDelay);kickBack(); sleep(shortDelay); kickFront();}
+    private void kickBack1()   {
+        double t=generalTimer.seconds();
+        gateNextPos=gateMidPOs;
+        gateNextTrigger= t;
+        backLoaderNextTrigger=t+gateDelay;
+        kickBack();
+        midLoaderNextTrigger=t+gateDelay+shortDelay;
+        kickMiddle();
+        frontLoaderNextTrigger=t+gateDelay+2*shortDelay;
+        kickFront();
+    }
+    private void kickBack1_2Step(){kickBack1();}
+    //private void kickBack1_2Step()   { gate.setPosition(gateMidPOs); sleep(gateDelay); backKick.setPosition(midPos); sleep(shortDelay); middleKick.setPosition(midPos); sleep(shortDelay); frontKick.setPosition(midPos);    sleep(longDelay); kickBack(); sleep(shortDelay); kickMiddle(); sleep(shortDelay); kickFront(); }
 
 
-    public Storage(HardwareMap hardwareMap, Turret turret) {
+    public StorageWLoader(HardwareMap hardwareMap, Turret turret) {
 
         myTurret=turret;
         frontKick = hardwareMap.get(Servo.class, "frontKick");
@@ -223,6 +341,7 @@ public class Storage {
     public void update() {
         String f = ballArray[0] = detectColor(frontColorSensor, frontDisSensor, "front");
         String m = ballArray[1] = detectColor(middleColorSensor, middleDisSensor, "middle");
+
         String b = ballArray[2] = detectColor(backColorSensor, backDisSensor, "back");
 
         dis = frontDisSensor.getDistance(DistanceUnit.CM);
@@ -246,7 +365,32 @@ public class Storage {
 
     }
 
+
+
     public void loadingUpdate() {
+        if (gateNextTrigger>0 &&generalTimer.seconds()>gateNextTrigger){
+            gate.setPosition(gateNextPos);
+            gateNextTrigger=-1;
+        }
+
+        if (frontLoaderNextTrigger>0 &&  generalTimer.seconds()>frontLoaderNextTrigger){
+            frontKick.setPosition(frontLoaderNextPos);
+            frontLoaderNextTrigger=-1;
+        }
+        if (midLoaderNextTrigger>0 &&  generalTimer.seconds()>midLoaderNextTrigger){
+            middleKick.setPosition(midLoaderNextPos);
+            midLoaderNextTrigger=-1;
+        }
+
+        if (backLoaderNextTrigger>0 &&  generalTimer.seconds()>backLoaderNextTrigger){
+            backKick.setPosition(backLoaderNextPos);
+            backLoaderNextTrigger=-1;
+        }
+
+        if (changeFlagTrigger>0 &&  generalTimer.seconds()>changeFlagTrigger){
+            flag=nextFlagValue;
+            changeFlagTrigger=-1;
+        }
         autoLoad();
         resetAfterLoad();
     }
@@ -293,6 +437,7 @@ public void color (double rgb) {
         if (resetting&&(generalTimer.seconds()-waitForLoaderResetTimer>resetDelay)){
             flag=true;
             resetting=false;
+            //kickUp=false;
         }
     }
     public void shotDetectReset() {
@@ -331,10 +476,11 @@ public void color (double rgb) {
     }
 
     public boolean pastTime (double seconds) {
-        if (seconds < timer.time()) {
+        if (seconds < timer.time() && changeFlagTrigger <0) {
             return true;
         } else {
             return false;
+
         }
     }
 
@@ -355,7 +501,7 @@ public void color (double rgb) {
         }
         else {
             if(intakeOn && intakeInward) {
-                gate.setPosition(1);
+                gate.setPosition(0.6);
             }
             intakeOn=false;
             transferServo.setPower(0);
@@ -366,7 +512,7 @@ public void color (double rgb) {
         gate.setPosition(0);
     }
     public void closeGate(){
-        gate.setPosition(1);
+        gate.setPosition(0.6);
     }
     private String detectColor(ColorSensor colorSensor, DistanceSensor distanceSensor, String slot) {
         normalizedColors = ((NormalizedColorSensor) colorSensor).getNormalizedColors();
@@ -445,13 +591,43 @@ public void color (double rgb) {
     }
 
     // Kickers
-    public void kickFront() { kickUp = true; frontKick.setPosition(1); }
-    public void kickMiddle() {  kickUp = true;middleKick.setPosition(1); }
-    public void kickBack() {  kickUp = true;backKick.setPosition(1); }
-    public void resetKick() {kickUp = false; backKick.setPosition(0); sleep(67); middleKick.setPosition(0); sleep(67); frontKick.setPosition(0); gate.setPosition(1); sleep(500); flag = true; }
-    public void resetKickers() {resetting = true; backKick.setPosition(0); sleep(30); middleKick.setPosition(0); sleep(30); frontKick.setPosition(0); gate.setPosition(1); } // new reset function, created by FX
+    public void kickFront() {
+        kickUp = true;
+        frontLoaderNextPos=1;
+        //frontKick.setPosition(1);
+    }
+    public void kickMiddle() {  kickUp = true; midLoaderNextPos=1; }
+    public void kickBack() {  kickUp = true; backLoaderNextPos=1; }
+    public void resetKick() {
+        kickUp = false;
+        double t =generalTimer.seconds();
+        backLoaderNextTrigger=t;
+        backLoaderNextPos=0;
+        midLoaderNextTrigger=t+0.067;
+        midLoaderNextPos=0;
+        frontLoaderNextTrigger=t+0.067*2;
+        frontLoaderNextPos=0;
+        gateNextTrigger=frontLoaderNextTrigger;
+        gateNextPos=gateMidPOs;
+        changeFlagTrigger=gateNextTrigger+0.5;
+        nextFlagValue=true;
+    }
+    public void resetKickers() {
+        resetting = true;
+        kickUp = false;
+        double t =generalTimer.seconds();
+        backLoaderNextTrigger=t;
+        backLoaderNextPos=0;
+        midLoaderNextTrigger=t+0.03;
+        midLoaderNextPos=0;
+        frontLoaderNextTrigger=t+0.03*2;
+        frontLoaderNextPos=0;
+        gateNextTrigger=frontLoaderNextTrigger;
+        gateNextPos=gateMidPOs;
 
-    private void sleep(int ms) { sleepTimer.reset(); while(sleepTimer.milliseconds() < ms) {} }
+         } // new reset function, created by FX
+
+    //private void sleep(int ms) { sleepTimer.reset(); while(sleepTimer.milliseconds() < ms) {} }
     double currentTime = 0;
     private void timeReset() {timer.reset();}
 
@@ -823,6 +999,8 @@ public void color (double rgb) {
         flagLoadingMiddle=true;
         flagLoadingFront=true;
     }
+
+    /*
     public void rapidFire() {
         boolean stat=false;
         boolean stat2=false;
@@ -835,10 +1013,10 @@ public void color (double rgb) {
                 loadFront();
             }
         }
-
-
     }
+    */
 
+    /*
     public boolean waitForReset() {
         double startTime = generalTimer.time();
         boolean timeOut = false;
@@ -855,7 +1033,7 @@ public void color (double rgb) {
 
         return (!timeOut);
     }
-
+    */
 
     // Count balls in storage
     public int ballCount() {

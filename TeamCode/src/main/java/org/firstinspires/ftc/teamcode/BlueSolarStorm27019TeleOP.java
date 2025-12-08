@@ -14,16 +14,17 @@ public class BlueSolarStorm27019TeleOP extends LinearOpMode {
     private Storage kickers;  // intake-free storage class
     private Pose2d pose = new Pose2d(0, 0, 0);
     private boolean waitingForConfig = true;
-    private double speedRatio = 0.3;
+    private double speedRatio = 0.4;
     @Override
     public void runOpMode() {
 
         // Initialize all systems
         turretSystem = new Turret(hardwareMap, telemetry);
         drive = new MecanumDrive(hardwareMap, pose);
-        drive.PARAMS.maxWheelVel=30;
+        //drive.PARAMS.maxWheelVel=30;
 
         kickers = new Storage(hardwareMap, turretSystem);  // intake-free kicker class
+        /*
         while (waitingForConfig){
             telemetry.addLine("DO NOT hit START for NOW!!!");
             telemetry.addLine("Turret + Drive + Kickers Ready");
@@ -38,6 +39,8 @@ public class BlueSolarStorm27019TeleOP extends LinearOpMode {
         }
         telemetry.addLine("Now you can start!");
         telemetry.update();
+
+         */
         waitForStart();
 
         // Button state trackers for toggles

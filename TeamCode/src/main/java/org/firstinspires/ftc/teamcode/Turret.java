@@ -22,7 +22,7 @@ public final class Turret {
         public static final double PID_INTERVAL = 0.1;
 
         public double kP = 0.0005;
-        public double kI = 0.005;
+        public double kI = 0.002;
         public double kD = 0.00001;
 
         public double toleranceRPM = 50.0;
@@ -287,6 +287,7 @@ public final class Turret {
         double offsetLeft;
         double offsetRight;
         offsetLeft = (targetRPM + 47.6) / 5952.0;
+        //offsetLeft=offsetLeft/2;
         double pidOutputLeft;
         pidOutputLeft = offsetLeft;
 
@@ -311,6 +312,7 @@ public final class Turret {
 
         double errorRight = targetRPM - currentRPMRight;
         offsetRight = (targetRPM + 47.6) / 5952.0;
+        //offsetRight=offsetRight/2;
         double pidOutputRight;
         pidOutputRight = offsetRight;
         if (Math.abs(errorRight) < PARAMS.toleranceRPM ) {
@@ -368,8 +370,8 @@ public final class Turret {
         double deltaTime = 0;
         double deltaLeftRPM = 0;
         double deltaRightRPM = 0;
-        leftDerivative = 0;
-        rightDerivative = 0;
+        integralRight = 0;
+        integralLeft = 0;
         if (shotDetectLastTime==0) shotDetectLastTime=timer.time();
         deltaTime = timer.time() - shotDetectLastTime;
 
