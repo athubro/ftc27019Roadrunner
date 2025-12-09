@@ -1,5 +1,9 @@
 package org.firstinspires.ftc.teamcode;
 
+import androidx.annotation.NonNull;
+
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import com.acmerobotics.roadrunner.Action;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -9,7 +13,6 @@ import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
-
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 public class StorageWLoader {
@@ -86,7 +89,8 @@ public class StorageWLoader {
     private static double longDelay =1; //s
     private static double gateMidPOs =0.6;
 
-    private static double gateDelay = 0.5 ; //s
+    private static double gateDelay = 0.1 ; //s
+    private static double frontGateDelay = 0.3;
 
     public boolean kick2StepFlag=false  ;
     public double redReading1 = 0;
@@ -158,7 +162,7 @@ public class StorageWLoader {
         double t=generalTimer.seconds();
         gateNextPos=1;
         gateNextTrigger= t;
-        frontLoaderNextTrigger=t+gateDelay;
+        frontLoaderNextTrigger=t+frontGateDelay;
         kickFront();
     }
 
@@ -223,6 +227,9 @@ public class StorageWLoader {
         kickBack();
     }
 
+    public void transferPower(double power) {
+        transferServo.setPower(power);
+    }
     private void kickMiddle2Front_2Step(){kickMiddle2Front();}
     //private void kickMiddle2Front_2Step() { gate.setPosition(gateMidPOs); sleep(gateDelay); middleKick.setPosition(midPos); sleep(shortDelay); backKick.setPosition(midPos);    sleep(longDelay); kickMiddle(); sleep(shortDelay); kickBack();}
     private void kickMiddle2Back()  {
@@ -241,9 +248,9 @@ public class StorageWLoader {
         double t=generalTimer.seconds();
         gateNextPos=1;
         gateNextTrigger= t;
-        frontLoaderNextTrigger=t+gateDelay;
+        frontLoaderNextTrigger=t+frontGateDelay;
         kickFront();
-        midLoaderNextTrigger=t+gateDelay+shortDelay;
+        midLoaderNextTrigger=t+frontGateDelay+shortDelay;
         kickMiddle();
     }
     private void kickFront2Back_2Step(){kickFront2Back();}
@@ -252,9 +259,9 @@ public class StorageWLoader {
         double t=generalTimer.seconds();
         gateNextPos=1;
         gateNextTrigger= t;
-        frontLoaderNextTrigger=t+gateDelay;
+        frontLoaderNextTrigger=t+frontGateDelay;
         kickFront();
-        backLoaderNextTrigger=t+gateDelay+shortDelay;
+        backLoaderNextTrigger=t+frontGateDelay+shortDelay;
         kickBack();
     }
     private void kickFront2Middle_2Step(){kickFront2Middle() ;}
@@ -265,11 +272,11 @@ public class StorageWLoader {
         double t=generalTimer.seconds();
         gateNextPos=1;
         gateNextTrigger= t;
-        frontLoaderNextTrigger=t+gateDelay;
+        frontLoaderNextTrigger=t+frontGateDelay;
         kickFront();
-        midLoaderNextTrigger=t+gateDelay+shortDelay;
+        midLoaderNextTrigger=t+frontGateDelay+shortDelay;
         kickMiddle();
-        backLoaderNextTrigger=t+gateDelay+2*shortDelay;
+        backLoaderNextTrigger=t+frontGateDelay+2*shortDelay;
         kickBack();
 
     }
@@ -609,7 +616,7 @@ public void color (double rgb) {
         frontLoaderNextPos=0;
         gateNextTrigger=frontLoaderNextTrigger;
         gateNextPos=gateMidPOs;
-        changeFlagTrigger=gateNextTrigger+0.5;
+        changeFlagTrigger=gateNextTrigger+0.3 ;
         nextFlagValue=true;
     }
     public void resetKickers() {
@@ -635,6 +642,7 @@ public void color (double rgb) {
 
     // Automated loading for green ball
     public void loadGreen() { loadBall("G"); }
+
 
 
     // Automated loading for purple ball
@@ -1043,5 +1051,18 @@ public void color (double rgb) {
         if (!backBall.equals("N")) count++;
 
         return count;
+    }
+
+    public class LoadGreenAction implements Action {
+        public boolean run(@NonNull TelemetryPacket pack){
+            loadBall("G");
+            return true;
+        }
+
+
+    }
+
+    public Action loadGreenAction(){
+        return new LoadGreenAction();
     }
 }

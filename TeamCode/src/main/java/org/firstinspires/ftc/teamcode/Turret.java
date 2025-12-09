@@ -95,7 +95,7 @@ public final class Turret {
     public double turretAnglePos = 0.5;   // start at middle position
     private static final double TURRET_ANGLE_STEP = 0.009;
 
-    public double targetAngle = 1;
+    public double targetAngle = 0;
 
     // External inputs (set by caller)
     public boolean shootingEnabled = false;
@@ -409,7 +409,7 @@ public final class Turret {
 
 
     // Non-blocking turret yaw control: tracking or manual
-    private void updateTurretControl() {
+    public void updateTurretControl() {
         double turretPower = 0.0;
          tagFound = false;
         double errorAngleDeg = 0.0;
@@ -479,7 +479,7 @@ public final class Turret {
 
 
             if (disToAprilTag < targetSpeedLinearSplit) {
-                targetRPM = (disToAprilTag * -11.9) + 3366;
+                targetRPM = (disToAprilTag * -11.9) + 3266;
             } else {
                 targetRPM = (disToAprilTag * 17.9) + 1950; //change from 1997 to 1950
             }
