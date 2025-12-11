@@ -21,6 +21,7 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
 
         // Initialize all systems
         turretSystem = new Turret(hardwareMap, telemetry);
+        turretSystem.autoSpinUp=true;
         drive = new MecanumDrive(hardwareMap, pose);
         //drive.PARAMS.maxWheelVel=30;
 
@@ -111,12 +112,10 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             if (gamepad2.b) kickers.resetKick();
             if (gamepad1.b) kickers.resetKick();
             if (gamepad1.right_bumper) kickers.loadAll();
-            if (turretSystem.tagFound) {
-                turretSystem.setShootingEnabled(true);
-            } else{
-                if (gamepad1.right_trigger>0.2) turretSystem.setShootingEnabled(true);
-                else turretSystem.setShootingEnabled(false);
-            }
+
+            if (gamepad1.right_trigger>0.2) turretSystem.setShootingEnabled(true);
+            else turretSystem.setShootingEnabled(false);
+
 
 
 

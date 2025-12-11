@@ -113,6 +113,7 @@ public final class Turret {
     public double leftDerivative=0;
     public double rightDerivative=0;
     private double speedCheckTimer =0;
+    public boolean autoSpinUp = false;
 
     public String[] motiff = {"N", "N", "N"};
     // Constructor
@@ -187,7 +188,7 @@ public final class Turret {
     public void update() {
 
         updateTurretControl();
-
+        //updateMotiff();
       //  setShootingEnabled(tagFound);
         // update shooter PID (non-blocking)
         calcTargetAngleSpeed();
@@ -199,7 +200,13 @@ public final class Turret {
 
         // update turret angle servo (non-blocking)
         updateTurretAngle();
-
+        if (autoSpinUp){
+            if (tagFound) {
+                setShootingEnabled(true);
+            } else {
+                setShootingEnabled(false);
+            }
+        }
         // telemetry
         sendTelemetry();
         // no sleeps here — caller loop remains responsive
@@ -335,7 +342,7 @@ public final class Turret {
             color(0.27);
 
         }
-        if (Math.abs(errorRight) < PARAMS.toleranceRPM*1.5 && Math.abs(errorLeft) < PARAMS.toleranceRPM*1.5){
+        if (Math.abs(errorRight) < PARAMS.toleranceRPM*1 && Math.abs(errorLeft) < PARAMS.toleranceRPM*1){
             if (timer.seconds()-speedCheckTimer>0.1){
                 shooterUpToSpeed=true;
                 color(0.611);
@@ -407,7 +414,32 @@ public final class Turret {
         lastRightRPM=currentRPMRight;
     }
 
+    public void updateMotiff () {
+        LLResult result = limelight.getLatestResult();
+        if (result != null && result.isValid()) {
+            for (LLResultTypes.FiducialResult fid : result.getFiducialResults()) {
+                if (fid.getFiducialId() == 21) {
+                    motiff[0] = "G";
+                    motiff[1] = "P";
+                    motiff[2] = "P";
+                    break;
+                }
+                if (fid.getFiducialId() == 22) {
+                    motiff[0] = "P";
+                    motiff[1] = "G";
+                    motiff[2] = "P";
+                    break;
+                }
+                if (fid.getFiducialId() == 23) {
+                    motiff[0] = "P";
+                    motiff[1] = "P";
+                    motiff[2] = "G";
+                    break;
+                }
 
+            }
+        }
+    }
     // Non-blocking turret yaw control: tracking or manual
     public void updateTurretControl() {
         double turretPower = 0.0;

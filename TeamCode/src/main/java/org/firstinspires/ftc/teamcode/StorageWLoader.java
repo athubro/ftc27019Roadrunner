@@ -19,7 +19,7 @@ public class StorageWLoader {
     public static class Params {
         public static double backDisCheck = 7;
         public static double frontDisCheck = 3.55; //3.7--->3.4
-        public static double middleDisCheck = 4.5;//change from 5 to 4.5
+        public static double middleDisCheck = 4.6;//change from 5 to 4.5 ->4.6
         public static double backGreenRatio = 3.0;
         public static double middleGreenRatio = 2.7;
         public static double frontGreenRatio = 3.75;
@@ -90,7 +90,7 @@ public class StorageWLoader {
     private static double gateMidPOs =0.6;
 
     private static double gateDelay = 0.1 ; //s
-    private static double frontGateDelay = 0.3;
+    private static double frontGateDelay = 0.5;
 
     public boolean kick2StepFlag=false  ;
     public double redReading1 = 0;
@@ -103,9 +103,15 @@ public class StorageWLoader {
     public double greenReading3 = 0;
     public double blueReading3=0;
 
-    private boolean flagLoadingMiddle = false;
-    private boolean flagLoadingBack=false;
-    private boolean flagLoadingFront = false;
+    public boolean flagLoadingMiddle = false;
+    public boolean flagLoadingBack=false;
+    public boolean flagLoadingFront = false;
+
+    private String[] firstColorReadings = {"N","N","N"}; // same formate as ball array index 0 is front
+    private String[] secondColorReadings = {"N","N","N"};
+    private String[] thirdColorReadings = {"N","N","N"};
+
+
 
 
     public static StorageWLoader.Params PARAMS = new StorageWLoader.Params();
@@ -151,7 +157,7 @@ public class StorageWLoader {
     private ElapsedTime sleepTimer = new ElapsedTime();
     public ElapsedTime generalTimer = new ElapsedTime();
     private double waitForLoaderResetTimer =0;
-    private final double resetDelay =0.5; //seconds to wait after reset the kicker;
+    private final double resetDelay =0.8; //seconds to wait after reset the kicker;
     private boolean resetting=false;
     public String[] ballArray = {"N", "N", "N"};
     public String frontBall = "N";
@@ -250,7 +256,7 @@ public class StorageWLoader {
         gateNextTrigger= t;
         frontLoaderNextTrigger=t+frontGateDelay;
         kickFront();
-        midLoaderNextTrigger=t+frontGateDelay+shortDelay;
+        midLoaderNextTrigger=t+frontGateDelay+shortDelay*4;
         kickMiddle();
     }
     private void kickFront2Back_2Step(){kickFront2Back();}
@@ -261,7 +267,7 @@ public class StorageWLoader {
         gateNextTrigger= t;
         frontLoaderNextTrigger=t+frontGateDelay;
         kickFront();
-        backLoaderNextTrigger=t+frontGateDelay+shortDelay;
+        backLoaderNextTrigger=t+frontGateDelay+shortDelay*4;
         kickBack();
     }
     private void kickFront2Middle_2Step(){kickFront2Middle() ;}
@@ -274,9 +280,9 @@ public class StorageWLoader {
         gateNextTrigger= t;
         frontLoaderNextTrigger=t+frontGateDelay;
         kickFront();
-        midLoaderNextTrigger=t+frontGateDelay+shortDelay;
+        midLoaderNextTrigger=t+frontGateDelay+shortDelay*4;
         kickMiddle();
-        backLoaderNextTrigger=t+frontGateDelay+2*shortDelay;
+        backLoaderNextTrigger=t+frontGateDelay+5*shortDelay;
         kickBack();
 
     }
@@ -343,13 +349,33 @@ public class StorageWLoader {
         ((NormalizedColorSensor) middleColorSensor).setGain(82);
         ((NormalizedColorSensor) backColorSensor).setGain(82);
     }
+    public String determineColor(String color, String index) {
+       int arrayindex=-1;
+        if (index.equals("front")) {
+            arrayindex = 0;
+        } else if (index.equals("middle")) {
+            arrayindex = 1;
 
+        } else if (index.equals("back")) {
+            arrayindex = 2;
+
+        }
+
+        firstColorReadings[arrayindex] = secondColorReadings[arrayindex];
+        secondColorReadings[arrayindex] = thirdColorReadings[arrayindex];
+        thirdColorReadings[arrayindex] = color;
+        if (firstColorReadings[arrayindex].equals(secondColorReadings[arrayindex]) && secondColorReadings[arrayindex].equals(thirdColorReadings[arrayindex])) {
+            return color;
+        } else {
+            return ballArray[arrayindex];
+        }
+    }
     // Update the color in each slot
     public void update() {
-        String f = ballArray[0] = detectColor(frontColorSensor, frontDisSensor, "front");
-        String m = ballArray[1] = detectColor(middleColorSensor, middleDisSensor, "middle");
+        String f = ballArray[0] = determineColor(detectColor(frontColorSensor, frontDisSensor, "front"), "front");
+        String m = ballArray[1] = determineColor(detectColor(middleColorSensor, middleDisSensor, "middle"), "middle");
 
-        String b = ballArray[2] = detectColor(backColorSensor, backDisSensor, "back");
+        String b = ballArray[2] = determineColor(detectColor(backColorSensor, backDisSensor, "back"), "back");
 
         dis = frontDisSensor.getDistance(DistanceUnit.CM);
         // Count how many balls are currently in storage
@@ -519,7 +545,7 @@ public void color (double rgb) {
         gate.setPosition(0);
     }
     public void closeGate(){
-        gate.setPosition(0.6);
+        gate.setPosition(0.5);
     }
     private String detectColor(ColorSensor colorSensor, DistanceSensor distanceSensor, String slot) {
         normalizedColors = ((NormalizedColorSensor) colorSensor).getNormalizedColors();
@@ -985,7 +1011,7 @@ public void color (double rgb) {
 
     public void autoLoad(){
         boolean turretReady = myTurret.tagFound;
-        if (turretReady&& flag && myTurret.shooterUpToSpeed){
+        if (turretReady && flag && myTurret.shooterUpToSpeed){
             if (flagLoadingBack){
                 loadBack();
                 flagLoadingBack=false;
