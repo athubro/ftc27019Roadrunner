@@ -7,7 +7,7 @@ import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
-@Autonomous(name = "Apollo 1 - Red", group = "Autonomous")
+@Autonomous(name = "Apollo 1", group = "Autonomous")
 public class AutonomousSample extends LinearOpMode {
 
     private String[] pattern = {"P", "G", "P"}; // Default pattern
@@ -17,7 +17,7 @@ public class AutonomousSample extends LinearOpMode {
         // =======================================
         // INITIALIZATION
         // =======================================
-        Pose2d startPose = new Pose2d(-44.97, 50.58, Math.toRadians(38.7));
+        Pose2d startPose = new Pose2d(-44.97, -50.58, Math.toRadians(-38.7));
         MecanumDrive drive = new MecanumDrive(hardwareMap, startPose);
         TurretCopy turret = new TurretCopy(hardwareMap, telemetry);
         StorageWLoaderCopy storage = new StorageWLoaderCopy(hardwareMap, turret);
@@ -47,7 +47,7 @@ public class AutonomousSample extends LinearOpMode {
                         // Move to motif detection position
                         drive.actionBuilder(startPose)
                                 .splineToLinearHeading(
-                                        new Pose2d(-24.45, 30, Math.toRadians(43.4)),
+                                        new Pose2d(-24.45, -30, Math.toRadians(-43.4)),
                                         Math.toRadians(30)
                                 )
                                 .build(),
@@ -57,9 +57,9 @@ public class AutonomousSample extends LinearOpMode {
 
                         // Turn to shooting heading (23.4°)
                         actions.moveToWithHeading(
-                                new Vector2d(-24.45, 30),
-                                Math.toRadians(-23.4),
-                                Math.toRadians(-23.4)
+                                new Vector2d(-24.45, -30),
+                                Math.toRadians(23.4),
+                                Math.toRadians(23.4)
                         ),
 
                         // Enable tracking and shoot the pattern
@@ -69,9 +69,9 @@ public class AutonomousSample extends LinearOpMode {
 
                         // Move to first intake position
                         actions.moveToWithHeading(
-                                new Vector2d(-10.3, 33.3),
-                                Math.toRadians(63.4),
-                                Math.toRadians(90)
+                                new Vector2d(-10.3, -33.3),
+                                Math.toRadians(-63.4),
+                                Math.toRadians(-90)
                         ),
 
                         // Start intake
@@ -79,9 +79,9 @@ public class AutonomousSample extends LinearOpMode {
 
                         // Move to second intake position
                         actions.moveToWithHeading(
-                                new Vector2d(-4.95, 57.2),
-                                Math.toRadians(91.2),
-                                Math.toRadians(90)
+                                new Vector2d(-4.95, -57.2),
+                                Math.toRadians(-91.2),
+                                Math.toRadians(-90)
                         ),
 
                         // Stop intake
@@ -91,18 +91,18 @@ public class AutonomousSample extends LinearOpMode {
 
                         // shooting
                         actions.moveToWithHeading(
-                                new Vector2d(-24.45, 30),
-                                Math.toRadians(-23.4),
-                                Math.toRadians(-23.4)
+                                new Vector2d(-24.45, -30),
+                                Math.toRadians(23.4),
+                                Math.toRadians(23.4)
                         ),
                         actions.turnOnTracking(0.0, 2.0),
                         actions.shootPattern(pattern, 5.0),
                         actions.turnOffTracking(),
                         //First Second Intake
                         actions.moveToWithHeading(
-                                new Vector2d(8.4, 35.4),
-                                Math.toRadians(60.13),
-                                Math.toRadians(60.13)
+                                new Vector2d(8.4, -35.4),
+                                Math.toRadians(-60.13),
+                                Math.toRadians(-60.13)
                         ),
 
                         // Start intake
@@ -112,9 +112,9 @@ public class AutonomousSample extends LinearOpMode {
 
 
                         actions.moveToWithHeading(
-                                new Vector2d(18, 58.216),
-                                Math.toRadians(72.37),
-                                Math.toRadians(72.37)
+                                new Vector2d(18, -58.216),
+                                Math.toRadians(-72.37),
+                                Math.toRadians(-72.37)
                         ),
 
                         // Stop intake
@@ -122,9 +122,9 @@ public class AutonomousSample extends LinearOpMode {
 
                         // Park at starting position
                         actions.moveToWithHeading(
-                                new Vector2d(-24.45, 30),
-                                Math.toRadians(-23.4),
-                                Math.toRadians(-23.4)
+                                new Vector2d(-24.45, -30),
+                                Math.toRadians(23.4),
+                                Math.toRadians(23.4)
                         ),
                         actions.turnOnTracking(0.0, 2.0),
                         actions.shootPattern(pattern, 5.0),
