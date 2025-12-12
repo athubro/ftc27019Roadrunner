@@ -13,9 +13,10 @@ import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
+
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
-public class StorageWLoader {
+public class StorageWLoaderCopy {
     public static class Params {
         public static double backDisCheck = 7;
         public static double frontDisCheck = 3.55; //3.7--->3.4
@@ -114,12 +115,12 @@ public class StorageWLoader {
 
 
 
-    public static StorageWLoader.Params PARAMS = new StorageWLoader.Params();
+    public static StorageWLoaderCopy.Params PARAMS = new StorageWLoaderCopy.Params();
     private Servo frontKick, middleKick, backKick, gate;
     private CRServo transferServo;
 
     public Servo rgbIndicator;
-    private Turret myTurret;
+    private TurretCopy myTurret;
 
     private ColorSensor frontColorSensor, middleColorSensor, backColorSensor;
     private DistanceSensor frontDisSensor, middleDisSensor, backDisSensor;
@@ -317,7 +318,7 @@ public class StorageWLoader {
     //private void kickBack1_2Step()   { gate.setPosition(gateMidPOs); sleep(gateDelay); backKick.setPosition(midPos); sleep(shortDelay); middleKick.setPosition(midPos); sleep(shortDelay); frontKick.setPosition(midPos);    sleep(longDelay); kickBack(); sleep(shortDelay); kickMiddle(); sleep(shortDelay); kickFront(); }
 
 
-    public StorageWLoader(HardwareMap hardwareMap, Turret turret) {
+    public StorageWLoaderCopy(HardwareMap hardwareMap, TurretCopy turret) {
 
         myTurret=turret;
         frontKick = hardwareMap.get(Servo.class, "frontKick");
