@@ -17,7 +17,7 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
  * Turret subsystem - non-blocking tracking, manual control works correctly.
  * Public API kept the same as before.
  */
-public  class Turret {
+public class TurretCopy {
     public static class Params {
         public static final double PID_INTERVAL = 0.1;
 
@@ -29,7 +29,7 @@ public  class Turret {
 
         public static final double TICKS_PER_REV = 28.0;
 
-        public static final int TARGET_TAG_ID = 20;
+
         public static final double TOLERANCE_DEG = 1.0;
         public static final double BASE_TURRET_POWER = 0.2;
         public static final double MIN_TURRET_POWER = 0.08;
@@ -39,6 +39,7 @@ public  class Turret {
     }
 
     public static Params PARAMS = new Params();
+    public int TARGET_TAG_ID = 20;
 
     // Hardware
     public final CRServo turret;          // continuous servo for yaw control
@@ -117,7 +118,7 @@ public  class Turret {
 
     public String[] motiff = {"N", "N", "N"};
     // Constructor
-    public Turret(HardwareMap hardwareMap, Telemetry telemetry) {
+    public TurretCopy(HardwareMap hardwareMap, Telemetry telemetry) {
         this.telemetry = telemetry;
 
         turret = hardwareMap.get(CRServo.class, "turret");
@@ -342,7 +343,7 @@ public  class Turret {
             color(0.27);
 
         }
-        if (Math.abs(errorRight) < PARAMS.toleranceRPM*1 && Math.abs(errorLeft) < PARAMS.toleranceRPM*1){
+        if (Math.abs(errorRight) < PARAMS.toleranceRPM*1.4 && Math.abs(errorLeft) < PARAMS.toleranceRPM*1.4){
             if (timer.seconds()-speedCheckTimer>0.1){
                 shooterUpToSpeed=true;
                 color(0.611);
@@ -451,7 +452,7 @@ public  class Turret {
             LLResult result = limelight.getLatestResult();
             if (result != null && result.isValid()) {
                 for (LLResultTypes.FiducialResult fid : result.getFiducialResults()) {
-                    if (fid.getFiducialId() == Params.TARGET_TAG_ID) {
+                    if (fid.getFiducialId() == TARGET_TAG_ID) {
                         tagFound = true;
                         errorAngleDeg = fid.getTargetXDegrees() - targetAngle+1;
                         ATAngle = fid.getTargetYDegrees();
@@ -511,7 +512,7 @@ public  class Turret {
 
 
             if (disToAprilTag < targetSpeedLinearSplit) {
-                targetRPM = (disToAprilTag * -11.9) + 3166; //3266->3166
+                targetRPM = (disToAprilTag * -11.9) + 3000; //3266->3166
             } else {
                 targetRPM = (disToAprilTag * 17.9) + 1950; //change from 1997 to 1950
             }

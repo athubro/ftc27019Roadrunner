@@ -6,13 +6,12 @@ import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-@TeleOp(name = "Turret + Mecanum + Kickers", group = "TeleOp")
-public class SolarStorm27019TeleOP extends LinearOpMode {
+@TeleOp(name = "Blue TeleOp", group = "TeleOp")
+public class BlueSolarStorm27019TeleOP extends LinearOpMode {
 
     private Turret turretSystem;
     private MecanumDrive drive;
-    //private Storage kickers;  // intake-free storage class
-    private StorageWLoader kickers;
+    private Storage kickers;  // intake-free storage class
     private Pose2d pose = new Pose2d(0, 0, 0);
     private boolean waitingForConfig = true;
     private double speedRatio = 0.4;
@@ -24,9 +23,9 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
         drive = new MecanumDrive(hardwareMap, pose);
         //drive.PARAMS.maxWheelVel=30;
 
-        //kickers = new Storage(hardwareMap, turretSystem);  // intake-free kicker class
-        kickers = new StorageWLoader(hardwareMap, turretSystem);
-       /* while (waitingForConfig){speedRatio
+        kickers = new Storage(hardwareMap, turretSystem);  // intake-free kicker class
+        /*
+        while (waitingForConfig){
             telemetry.addLine("DO NOT hit START for NOW!!!");
             telemetry.addLine("Turret + Drive + Kickers Ready");
             telemetry.addLine("Press pad-1 X to increase the speed ratio by 0.05");
@@ -34,14 +33,14 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             telemetry.addLine("Press pad-1 A when finish!");
             telemetry.addData("Speed Ratio", speedRatio);
             telemetry.update();
-            if (gamepad1.xWasReleased()) {+=0.05;}
+            if (gamepad1.xWasReleased()) {speedRatio+=0.05;}
             if (gamepad1.yWasReleased()) {speedRatio-=0.05;}
             if (gamepad1.aWasReleased()) {waitingForConfig=false;}
         }
         telemetry.addLine("Now you can start!");
         telemetry.update();
 
-        */
+         */
         waitForStart();
 
         // Button state trackers for toggles
@@ -99,9 +98,7 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             if(gamepad2.right_trigger > 0.1) kickers.setIntakePower(gamepad2.right_trigger);
             else if (gamepad2.left_trigger > 0.1)kickers.setIntakePower(-gamepad2.left_trigger);
             else kickers.setIntakePower(0);
-            if ((!(gamepad2.right_trigger >0.1)) && (!(gamepad2.left_trigger >0.1))) {
-                kickers.transferPower(gamepad1.left_stick_y);
-            }
+
 
             if (gamepad2.right_bumper) kickers.openGate();
             if (gamepad2.left_bumper) kickers.closeGate();
@@ -111,14 +108,8 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             if (gamepad2.b) kickers.resetKick();
             if (gamepad1.b) kickers.resetKick();
             if (gamepad1.right_bumper) kickers.loadAll();
-            if (turretSystem.tagFound) {
-                turretSystem.setShootingEnabled(true);
-            } else{
-                if (gamepad1.right_trigger>0.2) turretSystem.setShootingEnabled(true);
-                else turretSystem.setShootingEnabled(false);
-            }
-
-
+            if (gamepad1.right_trigger>0.2) turretSystem.setShootingEnabled(true);
+            else turretSystem.setShootingEnabled(false);
 
             // Manual kicking using D-pad
             if (gamepad2.dpad_up) kickers.kickBack();
@@ -126,9 +117,7 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             if (gamepad2.dpad_down) kickers.kickFront();
 
             // Optional telemetry for debugging
-            telemetry.addData("timer", kickers.generalTimer);
-            telemetry.addData("change flag trigger value", kickers.changeFlagTrigger);
-            telemetry.addData("flag", kickers.flag);
+            telemetry.addData("timer", kickers.timeRN);
             //telemetry.addData("RPM", turretSystem.getTargetRPM());
 
 

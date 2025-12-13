@@ -1,0 +1,531 @@
+package org.firstinspires.ftc.teamcode;
+
+import androidx.annotation.NonNull;
+
+import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.PoseVelocity2d;
+import com.acmerobotics.roadrunner.Vector2d;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import com.acmerobotics.roadrunner.Action;
+import com.qualcomm.robotcore.util.ElapsedTime;
+//import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+
+
+public class SSMyRobot  {
+
+    private Turret turretSystem;
+    private MecanumDrive drive;
+    //private Storage kickers;  // intake-free storage class
+    private StorageWLoader kickers;
+    private Pose2d pose ;
+    //private boolean waitingForConfig = true;
+    private double speedRatio = 0.4;
+
+    public boolean doneShooting = true;
+    public ElapsedTime generalTimer = new ElapsedTime();
+    public ElapsedTime transferTime = new ElapsedTime();
+    private HardwareMap myHardwareMap;
+
+    public SSMyRobot (HardwareMap hardwareMap, MecanumDrive myDrive, StorageWLoader storage, Turret turret, Pose2d newPos) {
+        kickers=storage;
+        drive = myDrive;
+        turretSystem=turret;
+        turretSystem.autoSpinUp=true;
+        myHardwareMap=hardwareMap;
+        pose=newPos;
+
+    }
+
+
+    public class Intake implements Action {
+        private double power;
+        public Intake (double Power) {
+            power = Power;
+        }
+        public boolean run(@NonNull TelemetryPacket pack) {
+            if (power>1) {
+                power = 1;
+            } else if (power < -1) {
+                power = -1;
+            }
+            kickers.setIntakePower(power);
+            return false;
+        }
+    }
+
+    public Action intake(double Power) {
+        return new Intake(Power);
+    }
+
+
+
+    public class ReverseTransfer implements Action {
+        double timeCap;
+        double startTime;
+
+        public ReverseTransfer () {
+            timeCap = 1.5;
+            generalTimer.reset();
+            startTime = generalTimer.seconds();
+        }
+        public boolean run(@NonNull TelemetryPacket pack) {
+            startTime = generalTimer.seconds();
+            kickers.transferPower(-1);
+            pack.put("timer reading ", generalTimer.seconds());
+            pack.put("starting time",startTime);
+
+            while (generalTimer.seconds()<startTime+timeCap){
+
+            }
+            kickers.transferPower(0);
+            return false;
+
+
+
+
+
+        }
+    }
+
+    public Action reverseTransfer() {
+        return new ReverseTransfer();
+    }
+
+
+
+
+    public class TurnOnTracking implements Action {
+        double timeCap;
+
+        public TurnOnTracking () {
+            timeCap = 5;
+        }
+        public boolean run(@NonNull TelemetryPacket pack) {
+
+            turretSystem.setTrackingMode(true);
+            turretSystem.update();
+            kickers.update();  // senses colors and updates slot states
+            kickers.loadingUpdate();
+            turretSystem.update();
+            if (turretSystem.tagFound) {
+                turretSystem.setShootingEnabled(true);
+
+            } else {
+                return true;
+            }
+
+            return false;
+
+
+
+
+
+        }
+    }
+
+    public Action turnOnTracking() {
+        return new TurnOnTracking();
+    }
+
+
+
+    public class TurnOffTracking implements Action {
+        double timeCap;
+
+        public TurnOffTracking () {
+            timeCap = 5;
+
+        }
+        public boolean run(@NonNull TelemetryPacket pack) {
+
+            turretSystem.setTrackingMode(false);
+            turretSystem.setShootingEnabled(false);
+            turretSystem.update();
+
+            return false;
+
+
+        }
+    }
+
+    public Action turnOffTracking() {
+        return new TurnOffTracking();
+    }
+
+
+    public class UpdateTracking implements Action {
+        double timeCap;
+
+        public UpdateTracking () {
+            timeCap = 5;
+        }
+        public boolean run(@NonNull TelemetryPacket pack) {
+
+            turretSystem.setTrackingMode(true);
+            turretSystem.update();
+            kickers.update();  // senses colors and updates slot states
+            kickers.loadingUpdate();
+            turretSystem.update();
+            if (turretSystem.tagFound) {
+                return true;
+            } else {
+                return false;
+            }
+
+
+
+
+
+
+
+        }
+    }
+
+    public Action updateTracking() {
+        return new UpdateTracking();
+    }
+
+
+
+
+
+    public class Load3 implements Action {
+        double timeCap;
+
+        public Load3 () {
+            timeCap = 5;
+        }
+        public boolean run(@NonNull TelemetryPacket pack) {
+            kickers.update();  // senses colors and updates slot states
+            kickers.loadingUpdate();
+            turretSystem.update();
+            kickers.loadAll();
+            kickers.update();  // senses colors and updates slot states
+            kickers.loadingUpdate();
+            turretSystem.update();
+            return false;
+
+
+
+
+        }
+    }
+    public class AfterLoad implements Action{
+        public  boolean run(@NonNull TelemetryPacket pack){
+            double startingTime= generalTimer.seconds();
+            double timeOut= 5; // 5 sec to time out;
+            boolean finished = false;
+
+            kickers.update();  // senses colors and updates slot states
+            kickers.loadingUpdate();
+            turretSystem.update();
+
+            if (kickers.kickUp && turretSystem.shotDetected) {
+                kickers.resetKick();
+                turretSystem.shotDetected = false;
+            }
+            finished=kickers.flag;
+            if (finished) {
+                return false;
+            } else {
+                return true;
+            }
+        }
+    }
+
+    public Action afterLoad (){
+        return new AfterLoad();
+    }
+    public Action load3() {
+        return new Load3();
+    }
+
+    public class AfterLoad3 implements Action {
+        double timeCap;
+
+        public AfterLoad3 () {
+            timeCap = 5;
+        }
+        public boolean run(@NonNull TelemetryPacket pack) {
+            kickers.update();  // senses colors and updates slot states
+            kickers.loadingUpdate();
+            turretSystem.update();
+            pack.put("flag", kickers.flag);
+            pack.put("front flag", kickers.flagLoadingFront);
+            pack.put("mid flag", kickers.flagLoadingMiddle);
+            pack.put("back flag", kickers.flagLoadingBack);
+            pack.put("front color", kickers.ballArray[0]);
+            pack.put("mid color", kickers.ballArray[1]);
+            pack.put("back color", kickers.ballArray[2]);
+            pack.put("motiff", turretSystem.motiff);
+            if (kickers.flag && (! kickers.flagLoadingFront) && (!kickers.flagLoadingMiddle) && (!kickers.flagLoadingBack)){
+                return false;
+            } else {
+                return true;
+            }
+
+
+
+
+
+        }
+    }
+
+
+
+
+    public Action afterLoad3() {
+        return new AfterLoad3();
+    }
+
+
+    public class MotiffUpdate implements Action {
+        public boolean run(@NonNull TelemetryPacket pack) {
+            turretSystem.updateMotiff();
+            kickers.update();  // senses colors and updates slot states
+            kickers.loadingUpdate();
+            turretSystem.update();
+            pack.put("motiff 0", turretSystem.motiff[0]);
+            pack.put("motiff 1", turretSystem.motiff[1]);
+            pack.put("motiff 3", turretSystem.motiff[2]);
+            if (turretSystem.motiff[0].equals("N")) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+
+    public Action motiffUpdate() {
+        return  new MotiffUpdate();
+    }
+
+    public class LoadMotiff implements Action {
+        public boolean run(@NonNull TelemetryPacket pack) {
+            kickers.update();  // senses colors and updates slot states
+            kickers.loadingUpdate();
+            turretSystem.update();
+            for (int i = 0; i < 3; i++) {
+                kickers.update();
+                turretSystem.update();
+                if (turretSystem.motiff[i].equals("P")) {
+                    loadPurpleAction();
+                } else {
+                    loadGreenAction();
+                }
+            }
+            return false;
+        }
+    }
+
+    public Action loadMotiff() {
+        return  new LoadMotiff();
+    }
+
+
+
+
+    public class CalcShotVariables implements Action {
+        public boolean run(@NonNull TelemetryPacket pack) {
+            double startingTime= generalTimer.seconds();
+            double timeOut= 5; // 5 sec to time out;
+
+
+            turretSystem.updateTurretControl();
+            turretSystem.measureDis();
+            turretSystem.calcTargetAngleSpeed();
+            if (turretSystem.tagFound) return false;
+            else return true;
+        }
+    }
+
+
+
+    public Action calcShotVariables() {
+        return new CalcShotVariables();
+    }
+
+
+    public class ShooterSpinUp implements Action {
+        public boolean run(@NonNull TelemetryPacket pack) {
+            turretSystem.shootingEnabled = true;
+            return false;
+        }
+    }
+
+    public Action shooterSpinUp() {
+        return new ShooterSpinUp();
+    }
+
+    public class ShooterStop implements Action {
+        public boolean run(@NonNull TelemetryPacket pack) {
+            turretSystem.shootingEnabled = false;
+            turretSystem.update();
+            return false;
+        }
+    }
+
+    public Action shooterStop() {
+        return new ShooterStop();
+    }
+
+
+
+    public class LoadGreenAction implements Action {
+        public boolean run(@NonNull TelemetryPacket pack){
+
+            turretSystem.update();
+            kickers.update();  // senses colors and updates slot states
+            kickers.loadingUpdate();
+            if (turretSystem.shooterUpToSpeed){
+                kickers.loadGreen();
+            }else{
+                return true;
+            }
+
+            return false;
+
+            /*
+            double startingTime= generalTimer.seconds();
+            double timeOut= 5; // 5 sec to time out;
+            boolean finished =false;
+            boolean shotFlag=false;
+            boolean storageFlag=false;
+
+            turretSystem.update();
+            kickers.update();  // senses colors and updates slot states
+            kickers.loadingUpdate();
+
+            shotDetectReset();
+            kickers.loadGreen();
+            while (!finished && generalTimer.seconds()<startingTime+timeOut){
+                turretSystem.update();
+                kickers.update();  // senses colors and updates slot states
+                kickers.loadingUpdate();
+
+                shotFlag=shotFlag || turretSystem.shotDetected;
+                if (shotFlag){
+                    storageFlag=storageFlag || kickers.flag;
+                }
+                finished= shotFlag && storageFlag;
+                shotDetectReset();
+
+            }
+
+            if (finished) return true;
+            else return false;
+            */
+        }
+
+
+    }
+
+    public Action loadGreenAction() {
+        return new LoadGreenAction();
+
+    }
+
+
+
+
+
+    public class LoadPurpleAction implements Action {
+        public boolean run(@NonNull TelemetryPacket pack){
+
+            turretSystem.update();
+            kickers.update();  // senses colors and updates slot states
+            kickers.loadingUpdate();
+            if (turretSystem.shooterUpToSpeed){
+                kickers.loadPurple();
+            }else{
+                return true;
+            }
+
+            return false;
+
+
+            /*
+            double startingTime= generalTimer.seconds();
+            double timeOut= 5; // 5 sec to time out;
+            boolean finished =false;
+            boolean shotFlag=false;
+            boolean storageFlag=false;
+
+            turretSystem.update();
+            kickers.update();  // senses colors and updates slot states
+            kickers.loadingUpdate();
+
+            shotDetectReset();
+            kickers.loadPurple();
+            while (!finished && generalTimer.seconds()<startingTime+timeOut){
+                turretSystem.update();
+                kickers.update();  // senses colors and updates slot states
+                kickers.loadingUpdate();
+
+                shotFlag=shotFlag || turretSystem.shotDetected;
+                if (shotFlag){
+                    storageFlag=storageFlag || kickers.flag;
+                }
+                finished= shotFlag && storageFlag;
+                shotDetectReset();
+
+            }
+
+            if (finished) return true;
+            else return false;
+*/
+        }
+
+
+    }
+
+    public Action loadPurpleAction() {
+        return new LoadPurpleAction();
+
+    }
+
+
+    public void shotDetectReset() {
+        if (kickers.kickUp && turretSystem.shotDetected) {
+            kickers.resetKick();
+            turretSystem.shotDetected = false;
+        }
+    }
+    /*
+    public void rapidFire(){
+        int count = kickers.ballCount();
+        kickers.update();
+        for (int i = 0; i < 3; i++) {
+            if (kickers.ballArray[i] == "P") {
+                kickers.loadPurple();
+                while (!kickers.flag && turretSystem.shotDetected) {
+                    kickers.update();
+                    turretSystem.update();
+
+                }
+                shotDetectReset();
+                sleep(400);
+
+            } else if (kickers.ballArray[i] == "G") {
+                kickers.loadGreen();
+                kickers.loadPurple();
+                while (!kickers.flag && turretSystem.shotDetected) {
+                    kickers.update();
+                    turretSystem.update();
+
+                }
+                shotDetectReset();
+                sleep(400);
+
+            } else {
+
+            }
+        }
+    }
+    */
+
+
+}
