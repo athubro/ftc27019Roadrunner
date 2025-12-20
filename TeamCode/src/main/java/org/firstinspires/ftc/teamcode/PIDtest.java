@@ -2,115 +2,165 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import com.acmerobotics.dashboard.config.Config;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
-@TeleOp(name = "PIDtest", group = "Autonomous")
+@Config
+@TeleOp(name = "PIDF Velocity Control", group ="TeleOP")
 public class PIDtest extends LinearOpMode {
 
-    private DcMotor leftMotor;
-    private DcMotor rightMotor;
-    private ElapsedTime timer = new ElapsedTime();
+    private DcMotorEx leftMotor;
+    private DcMotorEx rightMotor;
 
-    // PID constants
-    double kP = 0.015;
-    double kI = 0.000001;
-    double kD = 0.000000;
+    public static double kP = 0.25;
+    public static double kI = 0;
+    public static double kD = 0.0;
+    public static double kF = 12.35;
 
-    double targetRPM = 4500;
-    double tolerance = 15; // ±15 RPM
+    public static double targetRPM = 4500;
+    public static double TICKS_PER_REV = 28.0;
+
+    // ---- tuning helpers ----
+    private final ElapsedTime buttonTimer = new ElapsedTime();
+    private final ElapsedTime holdTimer = new ElapsedTime();
+    private final ElapsedTime recoveryTimer = new ElapsedTime();
+
+    private boolean isRecoveryTest = false;
+    private double recoveryTime = 0;
+
+    private static final double UPDATE_DELAY = 0.1;   // seconds
+    private static final double BASE_STEP = 0.001;
+    private static final double MAX_STEP = 0.05;
+    private static final double GROWTH_RATE = 1.2;
 
     @Override
     public void runOpMode() throws InterruptedException {
 
-        leftMotor = hardwareMap.get(DcMotor.class, "left motor");
-        rightMotor = hardwareMap.get(DcMotor.class, "right motor");
+        leftMotor = hardwareMap.get(DcMotorEx.class, "left motor");
+        rightMotor = hardwareMap.get(DcMotorEx.class, "right motor");
 
-        // Reset encoders
         leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-        leftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        rightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        leftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        // Reverse right motor direction
         rightMotor.setDirection(DcMotor.Direction.REVERSE);
 
-        // Initialize FTC Dashboard
+        leftMotor.setVelocityPIDFCoefficients(kP, kI, kD, kF);
+        rightMotor.setVelocityPIDFCoefficients(kP, kI, kD, kF);
+
         FtcDashboard dashboard = FtcDashboard.getInstance();
 
-        telemetry.addLine("PID Speed Control Ready");
-        telemetry.addLine("Motors will try to maintain 4000 RPM ±15");
+        telemetry.addLine("PIDF Velocity Control Ready");
         telemetry.update();
 
         waitForStart();
 
-        // PID variables
-        double integral = 0;
-        double lastError = 0;
-        int lastPosition = leftMotor.getCurrentPosition();
-        double lastTime = timer.seconds();
-        double output = 0; // last applied motor power
-
-        int loopCount = 0;
-        final int UPDATE_INTERVAL = 1000; // PID + telemetry every 1000 loops
+        buttonTimer.reset();
+        holdTimer.reset();
 
         while (opModeIsActive()) {
-            loopCount++;
 
-            if (loopCount % UPDATE_INTERVAL == 0) {
-                int currentPosition = leftMotor.getCurrentPosition();
-                double currentTime = timer.seconds();
+            leftMotor.setVelocityPIDFCoefficients(kP, kI, kD, kF * 0.98);
+            rightMotor.setVelocityPIDFCoefficients(kP * 1.05, kI, kD, kF);
 
-                int deltaTicks = currentPosition - lastPosition;
-                double deltaTime = currentTime - lastTime;
+            double targetVelocity = (targetRPM / 60.0) * TICKS_PER_REV;
 
-                if (deltaTime <= 0) deltaTime = 0.001;
+            // ---- HOLD-BASED TUNING ----
+            if (buttonTimer.seconds() >= UPDATE_DELAY) {
 
-                double revsPerSec = (deltaTicks / 28.0) / deltaTime; // 28 ticks per rev
-                double currentRPM = revsPerSec * 60.0;
+                double holdTime = holdTimer.seconds();
+                double step = BASE_STEP * Math.exp(holdTime * GROWTH_RATE);
+                step = Math.min(step, MAX_STEP);
+                step = Math.round(step * 100.0) / 100.0;
 
-                double error = targetRPM - currentRPM;
-
-                if (Math.abs(error) > tolerance) {
-                    integral += error * deltaTime;
+                // enforce minimum usable step
+                if (step < 0.01) {
+                    step = 0.01;
                 }
 
-                double derivative = (error - lastError) / deltaTime;
-                output = (kP * error) + (kI * integral) + (kD * derivative);
+                boolean anyHeld =
+                        gamepad1.dpad_up || gamepad1.dpad_down ||
+                                gamepad1.dpad_left || gamepad1.dpad_right;
 
-                output = Math.max(0, Math.min(1, output));
+                if (anyHeld) {
 
-                // Apply same power to both motors
-                leftMotor.setPower(output);
-                rightMotor.setPower(output);
+                    if (gamepad1.dpad_up) kP += step;
+                    if (gamepad1.dpad_down) kP -= step;
+                    if (gamepad1.dpad_left) kF += step;
+                    if (gamepad1.dpad_right) kF -= step;
 
-                // --- FTC Dashboard Telemetry ---
-                TelemetryPacket packet = new TelemetryPacket();
-                packet.put("Target RPM", targetRPM);
-                packet.put("Current RPM", currentRPM);
-                packet.put("Error", error);
-                packet.put("Motor Power", output);
-                dashboard.sendTelemetryPacket(packet);
-
-                // --- Driver Station Telemetry ---
-                telemetry.addData("Target RPM", targetRPM);
-                telemetry.addData("Current RPM", "%.2f", currentRPM);
-                telemetry.addData("Error", "%.2f", error);
-                telemetry.addData("Power", "%.3f", output);
-                telemetry.update();
-
-                lastError = error;
-                lastPosition = currentPosition;
-                lastTime = currentTime;
+                    buttonTimer.reset();
+                } else {
+                    holdTimer.reset();
+                }
             }
 
-            // Keep applying last power to maintain speed
-            leftMotor.setPower(output);
-            rightMotor.setPower(output);
+            if (gamepad1.yWasPressed()) targetRPM += 50;
+            if (gamepad1.aWasPressed()) targetRPM -= 50;
+
+            // ---- RECOVERY TEST ----
+            if (gamepad1.xWasPressed() && !isRecoveryTest) {
+                isRecoveryTest = true;
+                recoveryTimer.reset();
+            }
+
+            double leftRPM = (leftMotor.getVelocity() / TICKS_PER_REV) * 60.0;
+            double rightRPM = (rightMotor.getVelocity() / TICKS_PER_REV) * 60.0;
+
+            if (isRecoveryTest) {
+                double elapsed = recoveryTimer.seconds();
+
+                if (elapsed < 5.0) {
+                    // Set velocity to 0 for 2 seconds
+                    leftMotor.setVelocity(0);
+                    rightMotor.setVelocity(0);
+                } else {
+                    // Spin back up
+                    leftMotor.setVelocity(targetVelocity);
+                    rightMotor.setVelocity(targetVelocity);
+
+                    // Check if both motors have reached 95% of target
+                    double avgRPM = (leftRPM + rightRPM) / 2.0;
+                    if (avgRPM >= targetRPM) {
+                        recoveryTime = elapsed - 5.0; // Subtract the stop time
+                        isRecoveryTest = false;
+                    }
+                }
+            } else if (gamepad1.right_trigger > 0.1) {
+                leftMotor.setVelocity(targetVelocity);
+                rightMotor.setVelocity(targetVelocity);
+            } else {
+                leftMotor.setVelocity(0);
+                rightMotor.setVelocity(0);
+            }
+
+            TelemetryPacket packet = new TelemetryPacket();
+            packet.put("Target RPM", targetRPM);
+            packet.put("Left RPM", leftRPM);
+            packet.put("Right RPM", rightRPM);
+            packet.put("kP", kP);
+            packet.put("kF", kF);
+            packet.put("Recovery Time (s)", recoveryTime);
+            packet.put("Testing", isRecoveryTest);
+            dashboard.sendTelemetryPacket(packet);
+
+            telemetry.addData("Target RPM", targetRPM);
+            telemetry.addData("Left RPM", "%.1f", leftRPM);
+            telemetry.addData("Right RPM", "%.1f", rightRPM);
+            telemetry.addData("kP", "%.5f", kP);
+            telemetry.addData("kF", "%.5f", kF);
+            telemetry.addData("Recovery Time", "%.2f s", recoveryTime);
+            if (isRecoveryTest) {
+                telemetry.addLine(">> RECOVERY TEST RUNNING <<");
+            }
+            telemetry.update();
         }
     }
 }
