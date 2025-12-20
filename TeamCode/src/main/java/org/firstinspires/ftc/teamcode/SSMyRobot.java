@@ -28,6 +28,7 @@ public class SSMyRobot  {
     public ElapsedTime generalTimer = new ElapsedTime();
     public ElapsedTime transferTime = new ElapsedTime();
     private HardwareMap myHardwareMap;
+    public boolean updateFlag = false;
 
     public SSMyRobot (HardwareMap hardwareMap, MecanumDrive myDrive, StorageWLoader storage, Turret turret, Pose2d newPos) {
         kickers=storage;
@@ -67,22 +68,19 @@ public class SSMyRobot  {
         double startTime;
 
         public ReverseTransfer () {
-            timeCap = 1.5;
-            generalTimer.reset();
-            startTime = generalTimer.seconds();
+            //timeCap = 0.5;
+            //generalTimer.reset();
+            //startTime = generalTimer.seconds();
         }
         public boolean run(@NonNull TelemetryPacket pack) {
-            startTime = generalTimer.seconds();
+            //startTime = generalTimer.seconds();
             kickers.transferPower(-1);
-            pack.put("timer reading ", generalTimer.seconds());
-            pack.put("starting time",startTime);
-
-            while (generalTimer.seconds()<startTime+timeCap){
-
-            }
-            kickers.transferPower(0);
+            //pack.put("timer reading ", generalTimer.seconds());
+            //pack.put("starting time",startTime);
+            //turretSystem.update();
+            //kickers.update();
+            //kickers.loadingUpdate();
             return false;
-
 
 
 
@@ -94,6 +92,35 @@ public class SSMyRobot  {
         return new ReverseTransfer();
     }
 
+
+    public class ReverseTransferStop implements Action {
+        double timeCap;
+        double startTime;
+
+        public ReverseTransferStop () {
+            //timeCap = 0.5;
+            //generalTimer.reset();
+            //startTime = generalTimer.seconds();
+        }
+        public boolean run(@NonNull TelemetryPacket pack) {
+            //startTime = generalTimer.seconds();
+            kickers.transferPower(0);
+            //pack.put("timer reading ", generalTimer.seconds());
+            //pack.put("starting time",startTime);
+            //turretSystem.update();
+            //kickers.update();
+            //kickers.loadingUpdate();
+            return false;
+
+
+
+
+        }
+    }
+
+    public Action reverseTransferStop() {
+        return new ReverseTransferStop();
+    }
 
 
 
@@ -112,12 +139,11 @@ public class SSMyRobot  {
             turretSystem.update();
             if (turretSystem.tagFound) {
                 turretSystem.setShootingEnabled(true);
-
+                return false;
             } else {
                 return true;
             }
 
-            return false;
 
 
 
@@ -151,10 +177,53 @@ public class SSMyRobot  {
         }
     }
 
+    public class UpdateRobot implements Action{
+        public boolean run(@NonNull TelemetryPacket pack){
+            turretSystem.update();
+            kickers.update();  // senses colors and updates slot states
+            kickers.loadingUpdate();
+            pack.put("tag found",turretSystem.tagFound);
+            pack.put("shooting enabled",turretSystem.shootingEnabled);
+            pack.put("tracking mode",turretSystem.trackingMode);
+            if (updateFlag){
+                return true;
+            } else {
+                return false;
+            }
+
+        }
+    }
+
+
+
+    public Action updateRobot (){
+        return new UpdateRobot();
+    }
     public Action turnOffTracking() {
         return new TurnOffTracking();
     }
 
+    public class TurnOnUpdate implements  Action{
+        public boolean run(@NonNull TelemetryPacket pack){
+            updateFlag=true;
+            return false;
+        }
+    }
+
+    public Action turnOnUpdate(){
+        return new TurnOnUpdate();
+    }
+
+    public class TurnOffUpdate implements  Action{
+        public boolean run(@NonNull TelemetryPacket pack){
+            updateFlag=false;
+            return false;
+        }
+    }
+
+    public Action turnOffUpdate(){
+        return new TurnOffUpdate();
+    }
 
     public class UpdateTracking implements Action {
         double timeCap;
@@ -348,7 +417,32 @@ public class SSMyRobot  {
         return new CalcShotVariables();
     }
 
+    public class ConstantRPM implements Action{
+        public ConstantRPM(double rpm){
+            turretSystem.setTargetRPM(rpm);
+        }
+        public  boolean run(@NonNull TelemetryPacket pack){
+            turretSystem.constantRPM=true;
+            return false;
+        }
+    }
 
+    public Action constantPRM (double rpm){
+        return new ConstantRPM( rpm);
+
+    }
+
+    public class TrackingPRM implements Action{
+        public  boolean run(@NonNull TelemetryPacket pack){
+            turretSystem.constantRPM=false;
+            return false;
+        }
+    }
+
+    public Action trackingPRM (){
+        return new TrackingPRM();
+
+    }
     public class ShooterSpinUp implements Action {
         public boolean run(@NonNull TelemetryPacket pack) {
             turretSystem.shootingEnabled = true;

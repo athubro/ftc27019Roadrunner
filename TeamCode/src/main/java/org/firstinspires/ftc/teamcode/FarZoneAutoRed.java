@@ -1,30 +1,24 @@
 package org.firstinspires.ftc.teamcode;
-import android.app.Notification;
 
 
+import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.SequentialAction;
-import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
-import com.acmerobotics.roadrunner.Action;
-
-import com.acmerobotics.roadrunner.PoseVelocity2d;
-
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-@Autonomous(name = "FarZoneAutoBlue", group = "Autonomous")
-public class FarZoneAuto extends LinearOpMode {
+@Autonomous(name = "FarZoneAutoRed", group = "Autonomous")
+public class FarZoneAutoRed extends LinearOpMode {
 
     private Turret turretSystem;
     private MecanumDrive drive;
     //private Storage kickers;  // intake-free storage class
     private StorageWLoader kickers;
-    private Pose2d startPose = new Pose2d(62.7, -18.7, 0); //36.84, -14.96 0; delta x should be 25.9
+    private Pose2d startPose = new Pose2d(62.7, 18.7, 0); //36.84, -14.96 0; delta x should be 25.9
     private boolean waitingForConfig = true;
     private double speedRatio = 0.4;
 
@@ -42,6 +36,7 @@ public class FarZoneAuto extends LinearOpMode {
         kickers = new StorageWLoader(hardwareMap, turretSystem);
 
         myRobot= new SSMyRobot(hardwareMap,drive,kickers,turretSystem,startPose);
+
        /* while (waitingForConfig){speedRatio
             telemetry.addLine("DO NOT hit START for NOW!!!");
             telemetry.addLine("Turret + Drive + Kickers Ready");
@@ -65,8 +60,7 @@ public class FarZoneAuto extends LinearOpMode {
         boolean dpadUpLast = false;
         boolean dpadDownLast = false;
         turretSystem.update();
-        turretSystem.PARAMS.TARGET_TAG_ID = 20;
-
+        turretSystem.PARAMS.TARGET_TAG_ID = 24;
         // =========================
         // Kicker / Storage Updates
         // =========================
@@ -106,22 +100,22 @@ public class FarZoneAuto extends LinearOpMode {
         //                .turn( Math.PI / 4).build(), myRobot.turnOnTracking(), myRobot.loadMotiff())
         Actions.runBlocking(myRobot.turnOnUpdate());
         Actions.runBlocking(new ParallelAction(myRobot.updateRobot(), new SequentialAction( myRobot.turnOffTracking(),drive.actionBuilder(drive.localizer.getPose())
-                .turnTo(Math.toRadians(-110.67)).splineTo(new Vector2d(49.614, -38.1), Math.toRadians(-108.4)).build(),myRobot.intake(1), myRobot.turnOffUpdate())));
+                .lineToX(44).turnTo(3*Math.PI/4).build(),myRobot.intake(1), myRobot.turnOffUpdate())));
         drive.updatePoseEstimate(); // ---------------------------------^^23.714    ^^-38.1                 ^-108.4
         Actions.runBlocking(myRobot.turnOnUpdate());
         Actions.runBlocking(new ParallelAction(myRobot.updateRobot(),new SequentialAction( drive.actionBuilder(drive.localizer.getPose())
-                .splineTo(new Vector2d(41.95, -59.746), Math.toRadians(-103.7), new TranslationalVelConstraint(12)).build(), //, new TranslationalVelConstraint(10)
+                .splineTo(new Vector2d(30, 48.2), Math.toRadians(100), new TranslationalVelConstraint(15)).build(), //, new TranslationalVelConstraint(10)
                 myRobot.intake(0), myRobot.turnOffUpdate()))); // ^^^.lineToY(-58.746, new TranslationalVelConstraint(7))
         drive.updatePoseEstimate();
         Actions.runBlocking(myRobot.turnOnUpdate());
 
         Actions.runBlocking(new ParallelAction(myRobot.updateRobot(), myRobot.reverseTransfer(),new SequentialAction( drive.actionBuilder(drive.localizer.getPose())
-                .turnTo(Math.toRadians(-110)).lineToY(-20).turnTo(Math.toRadians(10)).build(), myRobot.reverseTransferStop(), myRobot.turnOffUpdate() )));
+                .turnTo(Math.toRadians(125)).lineToY(14).turnTo(Math.toRadians(-10)).build(), myRobot.reverseTransferStop(), myRobot.turnOffUpdate() )));
 
         drive.updatePoseEstimate();
         Actions.runBlocking(new SequentialAction( myRobot.turnOnTracking(),myRobot.shooterSpinUp(),motiffSequence2,
                 drive.actionBuilder(startPose)
-                        .lineToX(35).build()));
+                        .lineToX(35).build(), myRobot.turnOffTracking()));
         // ^^^ splineTo(new Vector2d(28.9,-15.0375), Math.toRadians(10)).build()
 
 //Pose2d(28.9,-15.0375, Math.toRadians(10)

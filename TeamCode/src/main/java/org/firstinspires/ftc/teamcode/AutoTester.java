@@ -1,30 +1,24 @@
 package org.firstinspires.ftc.teamcode;
-import android.app.Notification;
 
 
+import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.SequentialAction;
-import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
-import com.acmerobotics.roadrunner.Action;
-
-import com.acmerobotics.roadrunner.PoseVelocity2d;
-
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-@Autonomous(name = "FarZoneAutoBlue", group = "Autonomous")
-public class FarZoneAuto extends LinearOpMode {
+@Autonomous(name = "AutoTest", group = "Autonomous")
+public class AutoTester extends LinearOpMode {
 
     private Turret turretSystem;
     private MecanumDrive drive;
     //private Storage kickers;  // intake-free storage class
     private StorageWLoader kickers;
-    private Pose2d startPose = new Pose2d(62.7, -18.7, 0); //36.84, -14.96 0; delta x should be 25.9
+    private Pose2d startPose = new Pose2d(36.84, -14.96, 0);
     private boolean waitingForConfig = true;
     private double speedRatio = 0.4;
 
@@ -32,7 +26,6 @@ public class FarZoneAuto extends LinearOpMode {
     @Override
     public void runOpMode() {
         Action motiffSequence;
-        Action motiffSequence2;
         // Initialize all systems
         turretSystem = new Turret(hardwareMap, telemetry);
         drive = new MecanumDrive(hardwareMap, startPose);
@@ -65,8 +58,6 @@ public class FarZoneAuto extends LinearOpMode {
         boolean dpadUpLast = false;
         boolean dpadDownLast = false;
         turretSystem.update();
-        turretSystem.PARAMS.TARGET_TAG_ID = 20;
-
         // =========================
         // Kicker / Storage Updates
         // =========================
@@ -79,15 +70,11 @@ public class FarZoneAuto extends LinearOpMode {
         telemetry.addData("Motiff 2", turretSystem.motiff[2]);
         if (turretSystem.motiff[0].equals("G")) { //GPP
             motiffSequence = new SequentialAction(myRobot.loadGreenAction(),myRobot.afterLoad() , myRobot.loadPurpleAction(),myRobot.afterLoad(), myRobot.loadPurpleAction(),myRobot.afterLoad()); //
-
-            motiffSequence2 = new SequentialAction(myRobot.loadGreenAction(),myRobot.afterLoad() , myRobot.loadPurpleAction(),myRobot.afterLoad(), myRobot.loadPurpleAction(),myRobot.afterLoad()); //
         } else if (turretSystem.motiff[1].equals("G")) { //PGP
             motiffSequence = new SequentialAction(myRobot.loadPurpleAction(),myRobot.afterLoad(), myRobot.loadGreenAction(),myRobot.afterLoad(), myRobot.loadPurpleAction(),myRobot.afterLoad()); //, myRobot.loadGreenAction(),myRobot.afterLoad(), myRobot.loadPurpleAction(),myRobot.afterLoad()
-            motiffSequence2 = new SequentialAction(myRobot.loadPurpleAction(),myRobot.afterLoad(), myRobot.loadGreenAction(),myRobot.afterLoad(), myRobot.loadPurpleAction(),myRobot.afterLoad()); //, myRobot.loadGreenAction(),myRobot.afterLoad(), myRobot.loadPurpleAction(),myRobot.afterLoad()
 
         } else { //PPG
             motiffSequence = new SequentialAction(myRobot.loadPurpleAction(),myRobot.afterLoad(), myRobot.loadPurpleAction(),myRobot.afterLoad(), myRobot.loadGreenAction(),myRobot.afterLoad()); //
-            motiffSequence2 = new SequentialAction(myRobot.loadPurpleAction(),myRobot.afterLoad(), myRobot.loadPurpleAction(),myRobot.afterLoad(), myRobot.loadGreenAction(),myRobot.afterLoad()); //
 
         }
         /*
@@ -95,36 +82,37 @@ public class FarZoneAuto extends LinearOpMode {
 
 
         */
+        Actions.runBlocking(new SequentialAction(myRobot.constantPRM(3100),myRobot.shooterSpinUp()));
         Actions.runBlocking(myRobot.turnOnUpdate());
-        Actions.runBlocking(new ParallelAction(myRobot.updateRobot(), myRobot.reverseTransfer(),new SequentialAction(  drive.actionBuilder(startPose)
-                .lineToX(55.79 ).build(), myRobot.reverseTransferStop(),myRobot.turnOffUpdate())));
-        Actions.runBlocking(new SequentialAction(myRobot.turnOnTracking(),motiffSequence) );
+        Actions.runBlocking(new ParallelAction(myRobot.updateRobot(),myRobot.reverseTransfer(),new SequentialAction( drive.actionBuilder(startPose).splineToLinearHeading(new Pose2d(0,0,0),0).build(), myRobot.turnOffUpdate())));
+        Actions.runBlocking(new ParallelAction(myRobot.reverseTransfer(),drive.actionBuilder(startPose).turn(Math.toRadians(45)).build()));
+        Actions.runBlocking(new SequentialAction(myRobot.turnOnUpdate(), new ParallelAction(myRobot.updateRobot(),new SequentialAction(myRobot.turnOnTracking(), drive.actionBuilder(drive.localizer.getPose()).turn(Math.toRadians(-10)).waitSeconds(3).build(),myRobot.turnOffTracking(),myRobot.turnOffUpdate()))));
+        Actions.runBlocking(drive.actionBuilder(drive.localizer.getPose()).turn(Math.toRadians(-80)).build());
+        Actions.runBlocking(new SequentialAction(myRobot.turnOnUpdate(), new ParallelAction(myRobot.updateRobot(), myRobot.turnOnTracking(), new SequentialAction(drive.actionBuilder(drive.localizer.getPose()).turn(Math.toRadians(35)).waitSeconds(3).turn(Math.toRadians(45)).waitSeconds(5).build(),myRobot.turnOffUpdate()))));
+       /* Actions.runBlocking(new SequentialAction( myRobot.reverseTransfer(), drive.actionBuilder(startPose)
+                .lineToX(28.89).build(), myRobot.turnOnTracking(),
+                motiffSequence
+
+                ));
 
         drive.updatePoseEstimate();
 
         // drive.actionBuilder(pose)
         //                .turn( Math.PI / 4).build(), myRobot.turnOnTracking(), myRobot.loadMotiff())
-        Actions.runBlocking(myRobot.turnOnUpdate());
-        Actions.runBlocking(new ParallelAction(myRobot.updateRobot(), new SequentialAction( myRobot.turnOffTracking(),drive.actionBuilder(drive.localizer.getPose())
-                .turnTo(Math.toRadians(-110.67)).splineTo(new Vector2d(49.614, -38.1), Math.toRadians(-108.4)).build(),myRobot.intake(1), myRobot.turnOffUpdate())));
-        drive.updatePoseEstimate(); // ---------------------------------^^23.714    ^^-38.1                 ^-108.4
-        Actions.runBlocking(myRobot.turnOnUpdate());
-        Actions.runBlocking(new ParallelAction(myRobot.updateRobot(),new SequentialAction( drive.actionBuilder(drive.localizer.getPose())
-                .splineTo(new Vector2d(41.95, -59.746), Math.toRadians(-103.7), new TranslationalVelConstraint(12)).build(), //, new TranslationalVelConstraint(10)
-                myRobot.intake(0), myRobot.turnOffUpdate()))); // ^^^.lineToY(-58.746, new TranslationalVelConstraint(7))
+
+        Actions.runBlocking(new SequentialAction( myRobot.turnOffTracking(),drive.actionBuilder(drive.localizer.getPose())
+                .turn(Math.toRadians(-110.67)).splineTo(new Vector2d(24.714, -38.1), Math.toRadians(-108.4)).build(),myRobot.intake(1)));
+        drive.updatePoseEstimate(); // ---------------------------------^^24.714    ^^-38.1                 ^-108.4
+
+        Actions.runBlocking(new SequentialAction( drive.actionBuilder(drive.localizer.getPose())
+                .splineTo(new Vector2d(16.05, -59.746), Math.toRadians(-103.7), new TranslationalVelConstraint(10)).build(),
+                myRobot.intake(0))); // ^^^.lineToY(-58.746, new TranslationalVelConstraint(7))
         drive.updatePoseEstimate();
-        Actions.runBlocking(myRobot.turnOnUpdate());
 
-        Actions.runBlocking(new ParallelAction(myRobot.updateRobot(), myRobot.reverseTransfer(),new SequentialAction( drive.actionBuilder(drive.localizer.getPose())
-                .turnTo(Math.toRadians(-110)).lineToY(-20).turnTo(Math.toRadians(10)).build(), myRobot.reverseTransferStop(), myRobot.turnOffUpdate() )));
+        Actions.runBlocking(new SequentialAction( drive.actionBuilder(drive.localizer.getPose())
+                .splineToLinearHeading(new Pose2d(28.9,-15.0375, Math.toRadians(10)), Math.toRadians(10)).build(), myRobot.reverseTransfer(), myRobot.turnOnTracking(), motiffSequence ));
 
-        drive.updatePoseEstimate();
-        Actions.runBlocking(new SequentialAction( myRobot.turnOnTracking(),myRobot.shooterSpinUp(),motiffSequence2,
-                drive.actionBuilder(startPose)
-                        .lineToX(35).build()));
-        // ^^^ splineTo(new Vector2d(28.9,-15.0375), Math.toRadians(10)).build()
-
-//Pose2d(28.9,-15.0375, Math.toRadians(10)
+*/
         while (opModeIsActive()) {
 
             // =========================

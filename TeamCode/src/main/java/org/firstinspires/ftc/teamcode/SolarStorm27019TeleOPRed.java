@@ -6,8 +6,8 @@ import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-@TeleOp(name = "Blue TeleOp 1.0", group = "TeleOp")
-public class SolarStorm27019TeleOP extends LinearOpMode {
+@TeleOp(name = "Red TeleOp 1.0", group = "TeleOp")
+public class SolarStorm27019TeleOPRed extends LinearOpMode {
 
     private Turret turretSystem;
     private MecanumDrive drive;
@@ -28,7 +28,7 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
 
         //kickers = new Storage(hardwareMap, turretSystem);  // intake-free kicker class
         kickers = new StorageWLoader(hardwareMap, turretSystem);
-        turretSystem.PARAMS.TARGET_TAG_ID = 20;
+        turretSystem.PARAMS.TARGET_TAG_ID = 24;
        /* while (waitingForConfig){speedRatio
             telemetry.addLine("DO NOT hit START for NOW!!!");
             telemetry.addLine("Turret + Drive + Kickers Ready");
@@ -114,9 +114,9 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             if (gamepad2.b) kickers.resetKick();
             if (gamepad1.b) kickers.resetKick();
             if (gamepad1.left_bumper) kickers.loadAll();
-//
-         if (gamepad1.right_trigger>0.2) turretSystem.setShootingEnabled(true);
-      else turretSystem.setShootingEnabled(false);
+
+            if (gamepad1.right_trigger>0.2) turretSystem.setShootingEnabled(true);
+             else turretSystem.setShootingEnabled(false);
 
 
 

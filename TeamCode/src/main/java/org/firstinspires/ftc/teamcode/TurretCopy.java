@@ -17,19 +17,19 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
  * Turret subsystem - non-blocking tracking, manual control works correctly.
  * Public API kept the same as before.
  */
-public final class Turret {
-    public class Params {
+public class TurretCopy {
+    public static class Params {
         public static final double PID_INTERVAL = 0.1;
 
         public double kP = 0.0005;
         public double kI = 0.002;
         public double kD = 0.00001;
 
-        public double toleranceRPM = 80.0;
+        public double toleranceRPM = 50.0;
 
         public static final double TICKS_PER_REV = 28.0;
 
-        public int TARGET_TAG_ID = 20;
+
         public static final double TOLERANCE_DEG = 1.0;
         public static final double BASE_TURRET_POWER = 0.2;
         public static final double MIN_TURRET_POWER = 0.08;
@@ -37,8 +37,9 @@ public final class Turret {
         public static final double SEARCH_POWER = 0.08;
         public static final long TRACK_SLEEP_MS = 20L;
     }
-    //public int targetID=20;
-    public  Params PARAMS = new Params();
+
+    public static Params PARAMS = new Params();
+    public int TARGET_TAG_ID = 20;
 
     // Hardware
     public final CRServo turret;          // continuous servo for yaw control
@@ -114,11 +115,10 @@ public final class Turret {
     public double rightDerivative=0;
     private double speedCheckTimer =0;
     public boolean autoSpinUp = false;
-    public boolean constantRPM =false;
 
     public String[] motiff = {"N", "N", "N"};
     // Constructor
-    public Turret(HardwareMap hardwareMap, Telemetry telemetry) {
+    public TurretCopy(HardwareMap hardwareMap, Telemetry telemetry) {
         this.telemetry = telemetry;
 
         turret = hardwareMap.get(CRServo.class, "turret");
@@ -190,7 +190,7 @@ public final class Turret {
 
         updateTurretControl();
         //updateMotiff();
-      //  setShootingEnabled(tagFound);
+        //  setShootingEnabled(tagFound);
         // update shooter PID (non-blocking)
         calcTargetAngleSpeed();
         pidUpdate();
@@ -326,7 +326,7 @@ public final class Turret {
         if (Math.abs(errorRight) < PARAMS.toleranceRPM ) {
             //if (shooterUpToSpeed) integralRight=0;
             //pidOutputRight = offsetRight;
-           // color(0.611);
+            // color(0.611);
 
         } else if (Math.abs(errorRight) < 150) {
             integralRight += errorRight * deltaTime;
@@ -343,8 +343,8 @@ public final class Turret {
             color(0.27);
 
         }
-        if (Math.abs(errorRight) < PARAMS.toleranceRPM*1 && Math.abs(errorLeft) < PARAMS.toleranceRPM*1){
-            if (timer.seconds()-speedCheckTimer>0.15){
+        if (Math.abs(errorRight) < PARAMS.toleranceRPM*1.4 && Math.abs(errorLeft) < PARAMS.toleranceRPM*1.4){
+            if (timer.seconds()-speedCheckTimer>0.1){
                 shooterUpToSpeed=true;
                 color(0.611);
             }
@@ -444,7 +444,7 @@ public final class Turret {
     // Non-blocking turret yaw control: tracking or manual
     public void updateTurretControl() {
         double turretPower = 0.0;
-         tagFound = false;
+        tagFound = false;
         double errorAngleDeg = 0.0;
 
         if (trackingMode) {
@@ -452,22 +452,11 @@ public final class Turret {
             LLResult result = limelight.getLatestResult();
             if (result != null && result.isValid()) {
                 for (LLResultTypes.FiducialResult fid : result.getFiducialResults()) {
-                    if (fid.getFiducialId() == PARAMS.TARGET_TAG_ID) {
-
+                    if (fid.getFiducialId() == TARGET_TAG_ID) {
                         tagFound = true;
+                        errorAngleDeg = fid.getTargetXDegrees() - targetAngle+1;
                         ATAngle = fid.getTargetYDegrees();
                         measureDis();
-                      //  errorAngleDeg = fid.getTargetXDegrees() - targetAngle;
-                        //---new---
-                        if (disToAprilTag > 80 && PARAMS.TARGET_TAG_ID == 20) {
-                            errorAngleDeg = fid.getTargetXDegrees() - (targetAngle+3);
-                        } else if (disToAprilTag > 80 && PARAMS.TARGET_TAG_ID == 24) {
-                            errorAngleDeg = fid.getTargetXDegrees() - (targetAngle-3);
-                        } else {
-                            errorAngleDeg = fid.getTargetXDegrees() - targetAngle;
-                        }
-
-
 
                         break;
                     }
@@ -521,15 +510,14 @@ public final class Turret {
 
             turretAnglePos = clamper(shooterAngleSetting, 0.0, 1.0);
 
-            if (!constantRPM){
-                if (disToAprilTag < targetSpeedLinearSplit) {
-                    //targetRPM = (disToAprilTag * -11.9) + 3166; //used to be 3266->3166
-                    targetRPM = (disToAprilTag * -7) + 3016;
-                } else {
-                    targetRPM = (disToAprilTag * 17.9) + 1990; //change from 1997 to 1950
-                }
-            }
 
+            if (disToAprilTag < targetSpeedLinearSplit) {
+                //targetRPM = (disToAprilTag * -11.9) + 3000; //3266->3166
+                targetRPM = (disToAprilTag * -7) + 3016;
+            } else {
+                //targetRPM = (disToAprilTag * 17.9) + 1950; //change from 1997 to 1950
+                targetRPM = (disToAprilTag * 17.9) + 1990;
+            }
         }
 
     }
