@@ -18,14 +18,14 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 public class StorageWLoader {
     public static class Params {
         public static double backDisCheck = 7;
-        public static double frontDisCheck = 3.55; //3.7--->3.4
+        public static double frontDisCheck = 3.85; //3.7--->3.4
         public static double middleDisCheck = 4.6;//change from 5 to 4.5 ->4.6
         public static double backGreenRatio = 3.0;
         public static double middleGreenRatio = 2.7;
-        public static double frontGreenRatio = 3.75;
+        public static double frontGreenRatio = 2.45;
        //public static double boundaryGreen = 0.05;
         //--------------------------------------------------------front boundaries------------------------------
-       public static double Front_GreenRedRatio_UpperBound_PurpleBall = 0.05; //0.055-->0.03
+       public static double Front_GreenRedRatio_UpperBound_PurpleBall = 0.03; //0.055-->0.03
        //public static double boundaryUPPurple = 0.03;
        public static double Front_GreenRedRatio_LowerBound_PurpleBall = -0.03;//0.015
 
@@ -81,7 +81,7 @@ public class StorageWLoader {
         public static double blueRedRatioGreen = 2.35;
         public static double blueRedRatioPurple = 2.02;
         public static double greenRedRatioPurple = 1.1;
-
+        public static double greenRedRatioPurpleFront = 1.2;
     }
 
     private static double midPos = 0.6;
@@ -614,8 +614,11 @@ public void color (double rgb) {
         //-------------------------------
 
         double distance = distanceSensor.getDistance(DistanceUnit.CM);
-
-        if (G > (PARAMS.greenRedRatioPurple * R) + GR_LBound_P && G < (PARAMS.greenRedRatioPurple * R) + GR_UBound_P && B > (PARAMS.blueRedRatioPurple * R) + BR_LBound_P && B < (PARAMS.blueRedRatioPurple * R) +BR_UBound_P && distance < DisCheck)
+        double purpleBallGreenRedRatio = PARAMS.greenRedRatioPurple;
+        if (slot.equals("front")) {
+            purpleBallGreenRedRatio = PARAMS.greenRedRatioPurpleFront;
+        }
+        if (G > (purpleBallGreenRedRatio * R) + GR_LBound_P && G < (purpleBallGreenRedRatio * R) + GR_UBound_P && B > (PARAMS.blueRedRatioPurple * R) + BR_LBound_P && B < (PARAMS.blueRedRatioPurple * R) +BR_UBound_P && distance < DisCheck)
             return "P";
         else if (G > (greenRatio * R) + GR_LBound_G && G < (greenRatio * R) + GR_UBound_G && B > (PARAMS.blueRedRatioGreen * R) + BR_LBound_G && B < (PARAMS.blueRedRatioGreen * R) + BR_UBound_G && distance < DisCheck)
             return "G";

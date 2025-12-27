@@ -115,8 +115,8 @@ public class SolarStorm27019TeleOP extends LinearOpMode {
             if (gamepad1.b) kickers.resetKick();
             if (gamepad1.left_bumper) kickers.loadAll();
 //
-         if (gamepad1.right_trigger>0.2) turretSystem.setShootingEnabled(true);
-      else turretSystem.setShootingEnabled(false);
+            if (gamepad1.right_trigger>0.2) turretSystem.setShootingEnabled(true);
+             else turretSystem.setShootingEnabled(false);
 
 
 
